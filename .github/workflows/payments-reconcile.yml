@@ -1,0 +1,54 @@
+name: payments-reconcile
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Trigger reconciliation with retry
+        env:
+          PAYMENT_RECONCILE_URL: ${{ secrets.PAYMENT_RECONCILE_URL }}
+          PAYMENT_RECONCILE_TOKEN: ${{ secrets.PAYMENT_RECONCILE_TOKEN }}
+          PAYMENT_RECONCILE_MAX_ORDERS: ${{ secrets.PAYMENT_RECONCILE_MAX_ORDERS }}
+          PAYMENT_RECONCILE_MIN_ORDER_AGE_MINUTES: ${{ secrets.PAYMENT_RECONCILE_MIN_ORDER_AGE_MINUTES }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PAYMENT_RECONCILE_URL:-}" ]; then
+            echo "PAYMENT_RECONCILE_URL is missing" >&2
+            exit 2
+          fi
+
+          if [ -z "${PAYMENT_RECONCILE_TOKEN:-}" ]; then
+            echo "PAYMENT_RECONCILE_TOKEN is missing" >&2
+            exit 2
+          fi
+
+          ATTEMPTS=0
+          MAX_ATTEMPTS=3
+
+          until [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]
+          do
+            ATTEMPTS=$((ATTEMPTS + 1))
+            echo "Running reconciliation attempt ${ATTEMPTS}/${MAX_ATTEMPTS}"
+
+            if node scripts/reconcile-payments.mjs; then
+              echo "Reconciliation succeeded on attempt ${ATTEMPTS}"
+              exit 0
+            fi
+
+            if [ "$ATTEMPTS" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Reconciliation failed. Retrying in 15s..."
+              sleep 15
+            fi
+          done
+
+          echo "Reconciliation failed after ${MAX_ATTEMPTS} attempts."
+          exit 1
