@@ -7,7 +7,15 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // Cloudflare build tooling expects a top-level Vite plugins array it can patch.
+  plugins: [],
   vite: {
+    server: {
+      host: true,
+      port: 5173,
+      strictPort: true,
+      allowedHosts: true,
+    },
     build: {
       outDir: "dist",
     },
@@ -15,7 +23,6 @@ export default defineConfig({
       tsconfigPaths: true,
     },
   },
-  nitro: false,
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
