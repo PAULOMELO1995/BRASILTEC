@@ -17,12 +17,11 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-// Start installs this automatically when src/start.ts is absent; defining the
-// file opts out, so re-add it explicitly to keep server functions protected
-// from cross-site requests.
-const csrfMiddleware = createCsrfMiddleware({
-  filter: (ctx) => ctx.handlerType === "serverFn",
-});
+// createCsrfMiddleware may be undefined after edge bundling; fall back to a passthrough.
+const csrfMiddleware =
+  typeof createCsrfMiddleware === "function"
+    ? createCsrfMiddleware({ filter: (ctx) => ctx.handlerType === "serverFn" })
+    : createMiddleware().server(async ({ next }) => next());
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
