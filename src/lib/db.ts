@@ -1,20 +1,22 @@
-import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { Pool, type QueryResultRow } from "pg";
+import { getEnv } from "./env";
+
+// node:sqlite, node:fs and node:path are only available in Node.js runtime (not Cloudflare Workers).
+// All three are imported lazily inside getSqliteDatabase() so the module loads cleanly on any runtime.
+type DatabaseSyncType = import("node:sqlite").DatabaseSync;
 
 let pool: Pool | null = null;
-let sqliteDb: DatabaseSync | null = null;
+let sqliteDb: DatabaseSyncType | null = null;
 let migrationPromise: Promise<void> | null = null;
 let sqliteMigrationPromise: Promise<void> | null = null;
 
 function getDatabaseUrl(): string | null {
-  const value = process.env.DATABASE_URL?.trim();
+  const value = getEnv("DATABASE_URL");
   return value ? value : null;
 }
 
 function getSqlitePath(): string | null {
-  const explicit = process.env.SQLITE_PATH?.trim();
+  const explicit = getEnv("SQLITE_PATH");
   if (explicit) return explicit;
 
   const dbUrl = getDatabaseUrl();
@@ -35,6 +37,10 @@ export function isSqliteEnabled(): boolean {
   return !isPostgresEnabled() && Boolean(getSqlitePath());
 }
 
+export function getDatabaseMode(): "postgres" | "sqlite" {
+  return isPostgresEnabled() ? "postgres" : "sqlite";
+}
+
 function getPool(): Pool {
   if (pool) return pool;
 
@@ -47,13 +53,21 @@ function getPool(): Pool {
   return pool;
 }
 
-function getSqliteDatabase(): DatabaseSync {
+function getSqliteDatabase(): DatabaseSyncType {
   if (sqliteDb) return sqliteDb;
 
   const filePath = getSqlitePath();
   if (!filePath) {
     throw new Error("SQLITE_PATH não configurado.");
   }
+
+  // Dynamic requires keep node:sqlite/fs/path out of the Worker module graph.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { mkdirSync } = require("node:fs") as typeof import("node:fs");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { dirname, join } = require("node:path") as typeof import("node:path");
 
   const normalizedPath = filePath === ":memory:" ? filePath : join(process.cwd(), filePath);
   if (normalizedPath !== ":memory:") {
