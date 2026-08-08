@@ -1,0 +1,9 @@
+name = "brasiltec"
+main = ".output/server/index.mjs"
+compatibility_date = "2026-08-07"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = ".output/public"
+binding = "ASSETS"
