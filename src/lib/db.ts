@@ -1,8 +1,8 @@
+import { createRequire as _nodeRequire } from "node:module";
 import { Pool, type QueryResultRow } from "pg";
 import { getEnv } from "./env";
 
-// node:sqlite, node:fs and node:path are only available in Node.js runtime (not Cloudflare Workers).
-// All three are imported lazily inside getSqliteDatabase() so the module loads cleanly on any runtime.
+// node:sqlite is loaded lazily via createRequire so the Worker module graph stays clean.
 type DatabaseSyncType = import("node:sqlite").DatabaseSync;
 
 let pool: Pool | null = null;
@@ -61,13 +61,11 @@ function getSqliteDatabase(): DatabaseSyncType {
     throw new Error("SQLITE_PATH não configurado.");
   }
 
-  // Dynamic requires keep node:sqlite/fs/path out of the Worker module graph.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { mkdirSync } = require("node:fs") as typeof import("node:fs");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { dirname, join } = require("node:path") as typeof import("node:path");
+  // Unreachable in Cloudflare Workers (isPostgresEnabled() is always true there).
+  const req = _nodeRequire(import.meta.url);
+  const { DatabaseSync } = req("node:sqlite") as typeof import("node:sqlite");
+  const { mkdirSync } = req("node:fs") as typeof import("node:fs");
+  const { dirname, join } = req("node:path") as typeof import("node:path");
 
   const normalizedPath = filePath === ":memory:" ? filePath : join(process.cwd(), filePath);
   if (normalizedPath !== ":memory:") {
