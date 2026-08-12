@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { createRequire as _nodeRequire } from "node:module";
 import { ensureDatabaseSchema, isPostgresEnabled, isSqliteEnabled, postgresQuery, sqliteAll, sqliteGet, sqliteRun } from "./db";
+import { getEnv, getEnvBoolean, getEnvList, getEnvNumber } from "./env";
 
 export type BusinessType = "Produtor digital" | "Infoprodutor" | "Afiliado" | "Agência" | "E-commerce" | "Serviços";
 
@@ -29,7 +29,7 @@ export type ProductModerationDecision = "approve" | "reject";
 export type AdminRole = "none" | "viewer" | "moderator" | "admin";
 export type OrderStatus = "pending" | "approved" | "declined" | "refunded";
 export type PaymentMethod = "PIX" | "Cartão" | "Transferência" | "Boleto";
-export type PaymentProvider = "mock" | "gateway_webhook";
+export type PaymentProvider = "mock";
 export type PaymentWebhookStatus = Exclude<OrderStatus, "pending">;
 
 export type CheckoutOrderResult = {
@@ -341,7 +341,7 @@ export type PaymentReconciliationIssue = {
 };
 
 export type PaymentReconciliationSummary = {
-  provider: "mercado_pago";
+  provider: "disabled";
   checkedOrders: number;
   updatedOrders: number;
   unchangedOrders: number;
@@ -371,11 +371,11 @@ type StoreFile = {
   notifications: NotificationRecord[];
 };
 
-const storePath = join(process.cwd(), ".data", "brasiltec-store.json");
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 8;
 const SESSION_CLEANUP_INTERVAL_MS = 1000 * 60 * 5;
 const PASSWORD_RESET_DURATION_MS = 1000 * 60 * 30;
 const PLATFORM_FEE_RATE = 0.1;
+const GOOGLE_ACCOUNT_DEFAULT_BUSINESS: BusinessType = "Produtor digital";
 
 type SessionRotationFallback = {
   nextTokenDigest: string;
@@ -395,6 +395,12 @@ const emptyStore: StoreFile = {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function getStorePath(): string {
+  const req = _nodeRequire(import.meta.url);
+  const { join } = req("node:path") as typeof import("node:path");
+  return join(process.cwd(), ".data", "brasiltec-store.json");
 }
 
 function nowIso(): string {
@@ -433,36 +439,7 @@ function canTransitionOrderStatus(current: OrderStatus, next: OrderStatus): bool
 }
 
 function resolvePaymentProviderMode(): PaymentProvider {
-  return process.env["PAYMENT_GATEWAY_MODE"] === "webhook" ? "gateway_webhook" : "mock";
-}
-
-function isMercadoPagoGatewaySelected(): boolean {
-  const raw = process.env["PAYMENT_GATEWAY_PROVIDER"];
-  if (!raw) return true;
-  return raw.trim().toLowerCase() === "mercado_pago";
-}
-
-function requiredMercadoPagoAccessToken(): string {
-  const accessToken = process.env["MERCADO_PAGO_ACCESS_TOKEN"]?.trim();
-  if (!accessToken) {
-    throw new Error("MERCADO_PAGO_ACCESS_TOKEN não configurado para checkout real.");
-  }
-  return accessToken;
-}
-
-function resolvePaymentReturnBaseUrl(): string | null {
-  const baseUrl = process.env["APP_BASE_URL"]?.trim() ?? process.env["VITE_APP_BASE_URL"]?.trim() ?? "";
-  if (!baseUrl) return null;
-  return baseUrl.replace(/\/+$/, "");
-}
-
-function resolveWebhookNotificationUrl(): string | null {
-  const explicitUrl = process.env["PAYMENT_WEBHOOK_URL"]?.trim();
-  if (explicitUrl) return explicitUrl;
-
-  const baseUrl = resolvePaymentReturnBaseUrl();
-  if (!baseUrl) return null;
-  return `${baseUrl}/api/payments/webhook`;
+  return "mock";
 }
 
 function buildPaymentReference(orderId: string): string {
@@ -470,144 +447,8 @@ function buildPaymentReference(orderId: string): string {
   return `BT-${suffix}`;
 }
 
-async function getUserEmailByIdPostgres(userId: string): Promise<string | null> {
-  const rows = await postgresQuery<{ email: string }>(
-    `SELECT email FROM users WHERE id = $1 LIMIT 1`,
-    [userId],
-  );
-  return rows[0]?.email ?? null;
-}
-
-async function getUserEmailByIdSqlite(userId: string): Promise<string | null> {
-  const row = await sqliteGet<{ email: string }>(
-    `SELECT email FROM users WHERE id = ? LIMIT 1`,
-    [userId],
-  );
-  return row?.email ?? null;
-}
-
-function buildMercadoPagoPaymentMethods(method: PaymentMethod): {
-  excluded_payment_types?: Array<{ id: string }>;
-  installments?: number;
-} {
-  if (method === "PIX") {
-    return { excluded_payment_types: [{ id: "ticket" }, { id: "credit_card" }, { id: "debit_card" }, { id: "prepaid_card" }] };
-  }
-  if (method === "Boleto") {
-    return { excluded_payment_types: [{ id: "bank_transfer" }, { id: "credit_card" }, { id: "debit_card" }, { id: "prepaid_card" }] };
-  }
-  if (method === "Cartão") {
-    return { excluded_payment_types: [{ id: "ticket" }, { id: "bank_transfer" }], installments: 12 };
-  }
-  return {};
-}
-
-async function createMercadoPagoCheckoutPreference(input: {
-  orderId: string;
-  paymentReference: string;
-  title: string;
-  amountCents: number;
-  payerEmail: string | null;
-  paymentMethod: PaymentMethod;
-}): Promise<{ preferenceId: string; checkoutUrl: string }> {
-  const accessToken = requiredMercadoPagoAccessToken();
-  const currency = (process.env["MERCADO_PAGO_CURRENCY"] ?? "BRL").trim().toUpperCase();
-  const amount = Math.max(input.amountCents / 100, 0.01);
-  const baseUrl = resolvePaymentReturnBaseUrl();
-  const notificationUrl = resolveWebhookNotificationUrl();
-
-  const payload: {
-    external_reference: string;
-    items: Array<{
-      id: string;
-      title: string;
-      quantity: number;
-      unit_price: number;
-      currency_id: string;
-    }>;
-    metadata: { order_id: string; payment_reference: string };
-    back_urls?: { success: string; failure: string; pending: string };
-    auto_return?: "approved";
-    payer?: { email: string };
-    notification_url?: string;
-    payment_methods?: { excluded_payment_types?: Array<{ id: string }>; installments?: number };
-  } = {
-    external_reference: input.orderId,
-    items: [
-      {
-        id: input.orderId,
-        title: input.title,
-        quantity: 1,
-        unit_price: Number(amount.toFixed(2)),
-        currency_id: currency,
-      },
-    ],
-    metadata: {
-      order_id: input.orderId,
-      payment_reference: input.paymentReference,
-    },
-  };
-
-  if (baseUrl) {
-    payload.back_urls = {
-      success: `${baseUrl}/checkout?payment=success&orderId=${encodeURIComponent(input.orderId)}`,
-      failure: `${baseUrl}/checkout?payment=failure&orderId=${encodeURIComponent(input.orderId)}`,
-      pending: `${baseUrl}/checkout?payment=pending&orderId=${encodeURIComponent(input.orderId)}`,
-    };
-    payload.auto_return = "approved";
-  }
-
-  if (input.payerEmail) {
-    payload.payer = { email: input.payerEmail };
-  }
-
-  if (notificationUrl) {
-    payload.notification_url = notificationUrl;
-  }
-
-  const methodRestrictions = buildMercadoPagoPaymentMethods(input.paymentMethod);
-  if (Object.keys(methodRestrictions).length > 0) {
-    payload.payment_methods = methodRestrictions;
-  }
-
-  const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "content-type": "application/json",
-      "x-idempotency-key": input.orderId,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const details = (await response.text()).slice(0, 240);
-    throw new Error(`Mercado Pago retornou erro ao criar preferência (${response.status}): ${details}`);
-  }
-
-  const body = (await response.json()) as {
-    id?: unknown;
-    init_point?: unknown;
-    sandbox_init_point?: unknown;
-  };
-
-  const preferenceId = typeof body.id === "string" ? body.id : "";
-  const checkoutUrl =
-    typeof body.init_point === "string" && body.init_point
-      ? body.init_point
-      : typeof body.sandbox_init_point === "string" && body.sandbox_init_point
-        ? body.sandbox_init_point
-        : "";
-
-  if (!preferenceId || !checkoutUrl) {
-    throw new Error("Mercado Pago respondeu sem dados de preferência válidos.");
-  }
-
-  return { preferenceId, checkoutUrl };
-}
-
 function validateWebhookSignature(payload: string, signature: string | null | undefined): void {
-  const expectedSecret = process.env["PAYMENT_WEBHOOK_SECRET"];
+  const expectedSecret = getEnv("PAYMENT_WEBHOOK_SECRET");
   if (!expectedSecret) {
     // When no secret is configured, keep development workflow simple.
     return;
@@ -633,13 +474,13 @@ function sessionExpiryIso(): string {
 }
 
 function sessionRotationIntervalMs(): number {
-  const raw = Number(process.env["SESSION_ROTATION_INTERVAL_SECONDS"] ?? "1200");
+  const raw = getEnvNumber("SESSION_ROTATION_INTERVAL_SECONDS", 1200);
   const seconds = Number.isFinite(raw) ? Math.max(60, Math.min(24 * 60 * 60, Math.trunc(raw))) : 1200;
   return seconds * 1000;
 }
 
 function sessionRotationGraceMs(): number {
-  const raw = Number(process.env["SESSION_ROTATION_GRACE_SECONDS"] ?? "20");
+  const raw = getEnvNumber("SESSION_ROTATION_GRACE_SECONDS", 20);
   const seconds = Number.isFinite(raw) ? Math.max(5, Math.min(300, Math.trunc(raw))) : 20;
   return seconds * 1000;
 }
@@ -697,6 +538,10 @@ function retentionByBusiness(users: UserRecord[]): Record<BusinessType, number> 
 }
 
 async function readStoreFile(): Promise<StoreFile> {
+  const req = _nodeRequire(import.meta.url);
+  const { readFile } = req("node:fs/promises") as typeof import("node:fs/promises");
+  const storePath = getStorePath();
+
   try {
     const raw = await readFile(storePath, "utf8");
     const parsed = JSON.parse(raw) as Partial<StoreFile>;
@@ -712,6 +557,11 @@ async function readStoreFile(): Promise<StoreFile> {
 }
 
 async function writeStoreFile(store: StoreFile): Promise<void> {
+  const req = _nodeRequire(import.meta.url);
+  const { mkdir, writeFile } = req("node:fs/promises") as typeof import("node:fs/promises");
+  const { dirname } = req("node:path") as typeof import("node:path");
+  const storePath = getStorePath();
+
   await mkdir(dirname(storePath), { recursive: true });
   await writeFile(storePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
 }
@@ -1579,24 +1429,9 @@ async function createCheckoutOrderPostgres(userId: string, productId: string, pa
   const orderId = createId(`order:${userId}:${product.id}:${now}`);
   const paymentProvider = resolvePaymentProviderMode();
   const paymentReference = buildPaymentReference(orderId);
-  let providerStatus = "created";
-  let providerPaymentId: string | null = null;
-  let providerCheckoutUrl: string | null = null;
-
-  if (paymentProvider === "gateway_webhook" && isMercadoPagoGatewaySelected()) {
-    const payerEmail = await getUserEmailByIdPostgres(userId);
-    const preference = await createMercadoPagoCheckoutPreference({
-      orderId,
-      paymentReference,
-      title: product.name,
-      amountCents: product.priceCents,
-      payerEmail,
-      paymentMethod,
-    });
-    providerPaymentId = preference.preferenceId;
-    providerCheckoutUrl = preference.checkoutUrl;
-    providerStatus = "preference_created";
-  }
+  const providerStatus = "created";
+  const providerPaymentId: string | null = null;
+  const providerCheckoutUrl: string | null = null;
 
   await postgresQuery(
     `INSERT INTO orders (id, buyer_user_id, product_id, amount_cents, payment_method, payment_provider, provider_payment_id, provider_status, payment_reference, status, created_at, updated_at)
@@ -1627,24 +1462,9 @@ async function createCheckoutOrderSqlite(userId: string, productId: string, paym
   const orderId = createId(`order:${userId}:${product.id}:${now}`);
   const paymentProvider = resolvePaymentProviderMode();
   const paymentReference = buildPaymentReference(orderId);
-  let providerStatus = "created";
-  let providerPaymentId: string | null = null;
-  let providerCheckoutUrl: string | null = null;
-
-  if (paymentProvider === "gateway_webhook" && isMercadoPagoGatewaySelected()) {
-    const payerEmail = await getUserEmailByIdSqlite(userId);
-    const preference = await createMercadoPagoCheckoutPreference({
-      orderId,
-      paymentReference,
-      title: product.name,
-      amountCents: product.priceCents,
-      payerEmail,
-      paymentMethod,
-    });
-    providerPaymentId = preference.preferenceId;
-    providerCheckoutUrl = preference.checkoutUrl;
-    providerStatus = "preference_created";
-  }
+  const providerStatus = "created";
+  const providerPaymentId: string | null = null;
+  const providerCheckoutUrl: string | null = null;
 
   await sqliteRun(
     `INSERT INTO orders (id, buyer_user_id, product_id, amount_cents, payment_method, payment_provider, provider_payment_id, provider_status, payment_reference, status, created_at, updated_at)
@@ -1885,7 +1705,7 @@ async function processPaymentWebhookPostgres(input: ProcessPaymentWebhookInput):
          provider_status = $3,
          updated_at = $4
      WHERE id = $5`,
-    ["gateway_webhook", input.providerPaymentId ?? null, input.status, now, order.id],
+    ["mock", input.providerPaymentId ?? null, input.status, now, order.id],
   );
 
   await postgresQuery(
@@ -1994,7 +1814,7 @@ async function processPaymentWebhookSqlite(input: ProcessPaymentWebhookInput): P
          provider_status = ?,
          updated_at = ?
      WHERE id = ?`,
-    ["gateway_webhook", input.providerPaymentId ?? null, input.status, now, order.id],
+    ["mock", input.providerPaymentId ?? null, input.status, now, order.id],
   );
 
   await sqliteRun(
@@ -2859,6 +2679,30 @@ async function authenticateUserPostgres(input: { email: string; password: string
   return user;
 }
 
+async function authenticateOrCreateGoogleUserPostgres(input: {
+  email: string;
+  name: string;
+  businessType?: BusinessType;
+}): Promise<UserRecord> {
+  const existing = await findUserByEmailPostgres(input.email);
+  const normalizedName = input.name.trim() || input.email;
+
+  if (existing) {
+    const updatedAt = nowIso();
+    await postgresQuery(`UPDATE users SET name = $2, updated_at = $3 WHERE id = $1`, [existing.id, normalizedName, updatedAt]);
+    existing.name = normalizedName;
+    existing.updatedAt = updatedAt;
+    return existing;
+  }
+
+  return createUserPostgres({
+    name: normalizedName,
+    email: input.email,
+    password: randomBytes(24).toString("hex"),
+    businessType: input.businessType ?? GOOGLE_ACCOUNT_DEFAULT_BUSINESS,
+  });
+}
+
 async function createSessionPostgres(userId: string): Promise<SessionRecord> {
   await ensureDatabaseSchema();
   await cleanupExpiredSessionsPostgres();
@@ -3110,6 +2954,30 @@ async function authenticateUserSqlite(input: { email: string; password: string }
   user.updatedAt = nowIso();
   await sqliteRun(`UPDATE users SET updated_at = ? WHERE id = ?`, [user.updatedAt, user.id]);
   return user;
+}
+
+async function authenticateOrCreateGoogleUserSqlite(input: {
+  email: string;
+  name: string;
+  businessType?: BusinessType;
+}): Promise<UserRecord> {
+  const existing = await findUserByEmailSqlite(input.email);
+  const normalizedName = input.name.trim() || input.email;
+
+  if (existing) {
+    const updatedAt = nowIso();
+    await sqliteRun(`UPDATE users SET name = ?, updated_at = ? WHERE id = ?`, [normalizedName, updatedAt, existing.id]);
+    existing.name = normalizedName;
+    existing.updatedAt = updatedAt;
+    return existing;
+  }
+
+  return createUserSqlite({
+    name: normalizedName,
+    email: input.email,
+    password: randomBytes(24).toString("hex"),
+    businessType: input.businessType ?? GOOGLE_ACCOUNT_DEFAULT_BUSINESS,
+  });
 }
 
 async function createSessionSqlite(userId: string): Promise<SessionRecord> {
@@ -3486,6 +3354,42 @@ export async function authenticateUser(input: {
   }
 
   user.updatedAt = nowIso();
+  await writeStoreFile(store);
+  return user;
+}
+
+export async function authenticateOrCreateGoogleUser(input: {
+  email: string;
+  name: string;
+  businessType?: BusinessType;
+}): Promise<UserRecord> {
+  if (isPostgresEnabled()) return authenticateOrCreateGoogleUserPostgres(input);
+  if (isSqliteEnabled()) return authenticateOrCreateGoogleUserSqlite(input);
+
+  const store = await readStoreFile();
+  const email = normalizeEmail(input.email);
+  const normalizedName = input.name.trim() || email;
+  const existing = store.users.find((candidate) => normalizeEmail(candidate.email) === email);
+
+  if (existing) {
+    existing.name = normalizedName;
+    existing.updatedAt = nowIso();
+    await writeStoreFile(store);
+    return existing;
+  }
+
+  const now = nowIso();
+  const user: UserRecord = {
+    id: createHash("sha256").update(`${email}:${now}`).digest("hex").slice(0, 24),
+    name: normalizedName,
+    email,
+    businessType: input.businessType ?? GOOGLE_ACCOUNT_DEFAULT_BUSINESS,
+    passwordHash: hashPassword(randomBytes(24).toString("hex")),
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  store.users.push(user);
   await writeStoreFile(store);
   return user;
 }
@@ -4464,64 +4368,12 @@ function normalizeReconciliationMinAgeMinutes(minutes: number): number {
   return Math.min(1440, Math.max(0, rounded));
 }
 
-function mapMercadoPagoStatusToOrderStatus(raw: string | null): PaymentWebhookStatus | null {
-  if (!raw) return null;
-  const normalized = raw.trim().toLowerCase();
-  if (normalized === "approved") return "approved";
-  if (normalized === "refunded" || normalized === "charged_back") return "refunded";
-  if (normalized === "rejected" || normalized === "cancelled") return "declined";
-  return null;
-}
-
-async function fetchLatestMercadoPagoPaymentByOrder(orderId: string): Promise<{ paymentId: string | null; status: PaymentWebhookStatus | null }> {
-  const accessToken = process.env["MERCADO_PAGO_ACCESS_TOKEN"]?.trim();
-  if (!accessToken) {
-    throw new Error("MERCADO_PAGO_ACCESS_TOKEN não configurado para conciliação automática.");
-  }
-
-  const url = new URL("https://api.mercadopago.com/v1/payments/search");
-  url.searchParams.set("external_reference", orderId);
-  url.searchParams.set("sort", "date_created");
-  url.searchParams.set("criteria", "desc");
-  url.searchParams.set("limit", "1");
-
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "content-type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const details = (await response.text()).slice(0, 240);
-    throw new Error(`Mercado Pago retornou erro ao consultar conciliação (${response.status}): ${details}`);
-  }
-
-  const payload = (await response.json()) as {
-    results?: Array<{
-      id?: string | number;
-      status?: string;
-    }>;
-  };
-
-  const payment = Array.isArray(payload.results) ? payload.results[0] : undefined;
-  if (!payment) {
-    return { paymentId: null, status: null };
-  }
-
-  const paymentId =
-    typeof payment.id === "string" ? payment.id : typeof payment.id === "number" ? String(payment.id) : null;
-  const status = mapMercadoPagoStatusToOrderStatus(typeof payment.status === "string" ? payment.status : null);
-  return { paymentId, status };
-}
-
 async function listPendingGatewayOrdersPostgres(limit: number): Promise<Array<{ id: string; createdAt: string }>> {
   await ensureDatabaseSchema();
   const rows = await postgresQuery<{ id: string; created_at: Date | string }>(
     `SELECT id, created_at
      FROM orders
-     WHERE payment_provider = 'gateway_webhook'
+     WHERE payment_provider = 'mock'
        AND status = 'pending'
      ORDER BY created_at ASC
      LIMIT $1`,
@@ -4538,7 +4390,7 @@ async function listPendingGatewayOrdersSqlite(limit: number): Promise<Array<{ id
   const rows = await sqliteAll<{ id: string; created_at: string }>(
     `SELECT id, created_at
      FROM orders
-     WHERE payment_provider = 'gateway_webhook'
+     WHERE payment_provider = 'mock'
        AND status = 'pending'
      ORDER BY created_at ASC
      LIMIT ?`,
@@ -4553,60 +4405,23 @@ async function listPendingGatewayOrdersSqlite(limit: number): Promise<Array<{ id
 
 async function runPaymentGatewayReconciliationPostgres(limit: number, minOrderAgeMinutes: number): Promise<PaymentReconciliationSummary> {
   const startedAt = nowIso();
-  const issues: PaymentReconciliationIssue[] = [];
-  let checkedOrders = 0;
-  let updatedOrders = 0;
-  let unchangedOrders = 0;
-  let skippedOrders = 0;
-
   const minAgeMs = minOrderAgeMinutes * 60 * 1000;
   const orders = await listPendingGatewayOrdersPostgres(limit);
-
-  for (const order of orders) {
-    const ageMs = Date.now() - new Date(order.createdAt).getTime();
-    if (ageMs < minAgeMs) {
-      skippedOrders += 1;
-      continue;
-    }
-
-    checkedOrders += 1;
-    try {
-      const payment = await fetchLatestMercadoPagoPaymentByOrder(order.id);
-      if (!payment.status) {
-        unchangedOrders += 1;
-        continue;
-      }
-
-      const result = await processCheckoutPaymentWebhook({
-        provider: "mercado_pago_reconcile",
-        eventId: `reconcile:${order.id}:${payment.paymentId ?? "na"}:${payment.status}`,
-        orderId: order.id,
-        status: payment.status,
-        providerPaymentId: payment.paymentId,
-        payload: JSON.stringify({ source: "reconciliation", orderId: order.id }),
-        skipSignatureValidation: true,
-      });
-
-      if (result.applied) {
-        updatedOrders += 1;
-      } else {
-        unchangedOrders += 1;
-      }
-    } catch (error) {
-      issues.push({
-        orderId: order.id,
-        message: error instanceof Error ? error.message : "Falha desconhecida na conciliação.",
-      });
-    }
-  }
+  const checkedOrders = orders.filter((order) => Date.now() - new Date(order.createdAt).getTime() >= minAgeMs).length;
+  const skippedOrders = Math.max(0, orders.length - checkedOrders);
 
   return {
-    provider: "mercado_pago",
+    provider: "disabled",
     checkedOrders,
-    updatedOrders,
-    unchangedOrders,
+    updatedOrders: 0,
+    unchangedOrders: checkedOrders,
     skippedOrders,
-    issues,
+    issues: [
+      {
+        orderId: "*",
+        message: "Integrações externas de gateway estão desativadas neste projeto.",
+      },
+    ],
     startedAt,
     completedAt: nowIso(),
   };
@@ -4614,60 +4429,23 @@ async function runPaymentGatewayReconciliationPostgres(limit: number, minOrderAg
 
 async function runPaymentGatewayReconciliationSqlite(limit: number, minOrderAgeMinutes: number): Promise<PaymentReconciliationSummary> {
   const startedAt = nowIso();
-  const issues: PaymentReconciliationIssue[] = [];
-  let checkedOrders = 0;
-  let updatedOrders = 0;
-  let unchangedOrders = 0;
-  let skippedOrders = 0;
-
   const minAgeMs = minOrderAgeMinutes * 60 * 1000;
   const orders = await listPendingGatewayOrdersSqlite(limit);
-
-  for (const order of orders) {
-    const ageMs = Date.now() - new Date(order.createdAt).getTime();
-    if (ageMs < minAgeMs) {
-      skippedOrders += 1;
-      continue;
-    }
-
-    checkedOrders += 1;
-    try {
-      const payment = await fetchLatestMercadoPagoPaymentByOrder(order.id);
-      if (!payment.status) {
-        unchangedOrders += 1;
-        continue;
-      }
-
-      const result = await processCheckoutPaymentWebhook({
-        provider: "mercado_pago_reconcile",
-        eventId: `reconcile:${order.id}:${payment.paymentId ?? "na"}:${payment.status}`,
-        orderId: order.id,
-        status: payment.status,
-        providerPaymentId: payment.paymentId,
-        payload: JSON.stringify({ source: "reconciliation", orderId: order.id }),
-        skipSignatureValidation: true,
-      });
-
-      if (result.applied) {
-        updatedOrders += 1;
-      } else {
-        unchangedOrders += 1;
-      }
-    } catch (error) {
-      issues.push({
-        orderId: order.id,
-        message: error instanceof Error ? error.message : "Falha desconhecida na conciliação.",
-      });
-    }
-  }
+  const checkedOrders = orders.filter((order) => Date.now() - new Date(order.createdAt).getTime() >= minAgeMs).length;
+  const skippedOrders = Math.max(0, orders.length - checkedOrders);
 
   return {
-    provider: "mercado_pago",
+    provider: "disabled",
     checkedOrders,
-    updatedOrders,
-    unchangedOrders,
+    updatedOrders: 0,
+    unchangedOrders: checkedOrders,
     skippedOrders,
-    issues,
+    issues: [
+      {
+        orderId: "*",
+        message: "Integrações externas de gateway estão desativadas neste projeto.",
+      },
+    ],
     startedAt,
     completedAt: nowIso(),
   };
@@ -4676,7 +4454,7 @@ async function runPaymentGatewayReconciliationSqlite(limit: number, minOrderAgeM
 async function runPaymentGatewayReconciliationLocal(): Promise<PaymentReconciliationSummary> {
   const startedAt = nowIso();
   return {
-    provider: "mercado_pago",
+    provider: "disabled",
     checkedOrders: 0,
     updatedOrders: 0,
     unchangedOrders: 0,
@@ -5825,8 +5603,8 @@ export async function runPaymentGatewayReconciliation(options?: {
   limit?: number | undefined;
   minOrderAgeMinutes?: number | undefined;
 }): Promise<PaymentReconciliationSummary> {
-  const configuredLimit = Number(process.env["PAYMENT_RECONCILE_MAX_ORDERS"] ?? "50");
-  const configuredMinAge = Number(process.env["PAYMENT_RECONCILE_MIN_ORDER_AGE_MINUTES"] ?? "2");
+  const configuredLimit = getEnvNumber("PAYMENT_RECONCILE_MAX_ORDERS", 50);
+  const configuredMinAge = getEnvNumber("PAYMENT_RECONCILE_MIN_ORDER_AGE_MINUTES", 2);
 
   const limit = normalizeReconciliationLimit(options?.limit ?? configuredLimit);
   const minOrderAgeMinutes = normalizeReconciliationMinAgeMinutes(options?.minOrderAgeMinutes ?? configuredMinAge);
