@@ -4,6 +4,21 @@ compatibility_date = "2026-08-07"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+[vars]
+APP_BASE_URL = "https://brasiltec.net.br"
+NODE_ENV = "production"
+ADMIN_EMAILS = "admin@brasiltec.net.br"
+MODERATOR_EMAILS = "moderacao@brasiltec.net.br"
+ADMIN_VIEWER_EMAILS = "auditoria@brasiltec.net.br"
+SESSION_ROTATION_INTERVAL_SECONDS = "1200"
+SESSION_ROTATION_GRACE_SECONDS = "20"
+SUPPORT_DEFAULT_RECIPIENT = "suporte@brasiltec.net.br"
+SUPPORT_ALLOWED_RECIPIENTS = "suporte@brasiltec.net.br,operacoes@brasiltec.net.br"
+SUPPORT_EMAIL_PROVIDER = "log"
+WELCOME_EMAIL_ENABLED = "true"
+WELCOME_EMAIL_SUBJECT = "Bem-vindo(a) a Brasiltec"
+VITE_PAYMENT_GATEWAY_MODE = "simulation"
+
 [assets]
 directory = ".output/public"
 binding = "ASSETS"
