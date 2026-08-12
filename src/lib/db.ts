@@ -1,5 +1,5 @@
 import { createRequire as _nodeRequire } from "node:module";
-import { Pool, type QueryResultRow } from "pg";
+import type { Pool, QueryResultRow } from "pg";
 import { getEnv } from "./env";
 
 // node:sqlite is loaded lazily via createRequire so the Worker module graph stays clean.
@@ -9,6 +9,16 @@ let pool: Pool | null = null;
 let sqliteDb: DatabaseSyncType | null = null;
 let migrationPromise: Promise<void> | null = null;
 let sqliteMigrationPromise: Promise<void> | null = null;
+let poolCtor: (new (config: { connectionString: string }) => Pool) | null = null;
+
+function getPoolCtor(): new (config: { connectionString: string }) => Pool {
+  if (poolCtor) return poolCtor;
+
+  const req = _nodeRequire(import.meta.url);
+  const pgModule = req("pg") as typeof import("pg");
+  poolCtor = pgModule.Pool as new (config: { connectionString: string }) => Pool;
+  return poolCtor;
+}
 
 function getDatabaseUrl(): string | null {
   const value = getEnv("DATABASE_URL");
@@ -49,7 +59,8 @@ function getPool(): Pool {
     throw new Error("DATABASE_URL não configurado.");
   }
 
-  pool = new Pool({ connectionString });
+  const PoolCtor = getPoolCtor();
+  pool = new PoolCtor({ connectionString });
   return pool;
 }
 
