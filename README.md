@@ -138,7 +138,7 @@ Também foi incluído workflow de agendamento em [payments-reconcile.yml](.githu
 O workflow usa o runner oficial do projeto e aplica até 3 tentativas automáticas por execução.
 Se a conciliação retornar issues, o runner encerra com erro e o job falha (facilitando alertas nativos do GitHub).
 
-Configure estes secrets no repositório para ativar o job:
+Configure estes secrets no repositório para ativar o job. Sem eles, o workflow encerra sem falha e emite um warning, evitando falsos negativos no agendamento:
 
 - `PAYMENT_RECONCILE_URL`
 - `PAYMENT_RECONCILE_TOKEN`

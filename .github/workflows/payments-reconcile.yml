@@ -21,14 +21,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${PAYMENT_RECONCILE_URL:-}" ]; then
-            echo "PAYMENT_RECONCILE_URL is missing" >&2
-            exit 2
-          fi
-
-          if [ -z "${PAYMENT_RECONCILE_TOKEN:-}" ]; then
-            echo "PAYMENT_RECONCILE_TOKEN is missing" >&2
-            exit 2
+          if [ -z "${PAYMENT_RECONCILE_URL:-}" ] || [ -z "${PAYMENT_RECONCILE_TOKEN:-}" ]; then
+            echo "::warning::Skipping reconciliation because PAYMENT_RECONCILE_URL or PAYMENT_RECONCILE_TOKEN is not configured."
+            exit 0
           fi
 
           ATTEMPTS=0
