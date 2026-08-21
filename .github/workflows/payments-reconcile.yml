@@ -21,14 +21,16 @@ jobs:
         run: |
           set -euo pipefail
 
+          MISSING_SECRETS=()
           if [ -z "${PAYMENT_RECONCILE_URL:-}" ]; then
-            echo "PAYMENT_RECONCILE_URL is missing" >&2
-            exit 2
+            MISSING_SECRETS+=("PAYMENT_RECONCILE_URL")
           fi
-
           if [ -z "${PAYMENT_RECONCILE_TOKEN:-}" ]; then
-            echo "PAYMENT_RECONCILE_TOKEN is missing" >&2
-            exit 2
+            MISSING_SECRETS+=("PAYMENT_RECONCILE_TOKEN")
+          fi
+          if [ "${#MISSING_SECRETS[@]}" -gt 0 ]; then
+            echo "::warning::Skipping reconciliation because required secret(s) are not configured: ${MISSING_SECRETS[*]}"
+            exit 0
           fi
 
           ATTEMPTS=0
