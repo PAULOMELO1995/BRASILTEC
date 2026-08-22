@@ -34,6 +34,8 @@ jobs:
 
       - name: Run Sprint A smoke
         run: npm run smoke:sprintA
+        env:
+          NITRO_PRESET: node
 
       - name: Upload Playwright artifacts on failure
         if: failure()
