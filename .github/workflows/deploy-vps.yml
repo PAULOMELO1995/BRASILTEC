@@ -1,0 +1,83 @@
+name: Deploy VPS Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build e Deploy no VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build (preset node)
+        run: npm run build
+        env:
+          NITRO_PRESET: node
+          NODE_ENV: production
+
+      - name: Compactar artefatos de deploy
+        run: |
+          tar -czf deploy.tar.gz \
+            dist/ \
+            package.json \
+            package-lock.json \
+            ecosystem.config.cjs
+
+      - name: Copiar artefatos para o VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: deploy.tar.gz
+          target: /tmp/brasiltec
+
+      - name: Deploy e reiniciar app no VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+
+            APP_DIR=/var/www/brasiltec
+            BACKUP_DIR=/var/www/brasiltec-backup
+
+            # Descompactar artefatos
+            mkdir -p $APP_DIR
+            tar -xzf /tmp/brasiltec/deploy.tar.gz -C $APP_DIR
+            rm -rf /tmp/brasiltec
+
+            # Instalar dependências de produção
+            cd $APP_DIR
+            npm ci --omit=dev
+
+            # Reiniciar via PM2 (instala se necessário)
+            if ! command -v pm2 &> /dev/null; then
+              npm install -g pm2
+            fi
+
+            pm2 startOrRestart ecosystem.config.cjs --env production
+            pm2 save
+
+            echo "✅ Deploy concluído com sucesso!"
