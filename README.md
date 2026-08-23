@@ -4,6 +4,80 @@ Aplicação web em TanStack Start + React para cadastro, login e painel com pers
 
 Quando você criar um repositório no GitHub, pode reativar o badge de CI apontando para `.github/workflows/smoke-sprinta.yml`.
 
+## Deploy no VPS Hostinger
+
+O projeto inclui deploy automático via GitHub Actions para um VPS na Hostinger.
+A cada push na branch `main`/`master`, o workflow faz o build e envia o app para o servidor.
+
+### Pré-requisitos no VPS
+
+1. **Node.js 22+** instalado (`nvm` ou `apt`)
+2. **PM2** (instalado automaticamente pelo workflow, se necessário)
+3. **Nginx** como proxy reverso (veja configuração abaixo)
+4. Usuário SSH com acesso ao diretório `/var/www/brasiltec`
+
+### Secrets necessários no GitHub
+
+Acesse **Settings → Secrets and variables → Actions** do repositório e adicione:
+
+| Secret | Descrição |
+|---|---|
+| `VPS_HOST` | IP ou domínio do VPS (ex: `123.45.67.89` ou `brasiltec.net.br`) |
+| `VPS_USER` | Usuário SSH (ex: `ubuntu` ou `root`) |
+| `VPS_SSH_KEY` | Chave SSH privada (conteúdo do arquivo `~/.ssh/id_rsa`) |
+| `VPS_PORT` | Porta SSH (opcional, padrão `22`) |
+
+### Gerar chave SSH para o deploy
+
+No seu computador local, execute:
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-brasiltec" -f ~/.ssh/brasiltec_deploy
+```
+
+Copie a chave **pública** para o VPS:
+
+```bash
+ssh-copy-id -i ~/.ssh/brasiltec_deploy.pub usuario@IP_DO_VPS
+```
+
+Copie o conteúdo da chave **privada** (`~/.ssh/brasiltec_deploy`) como valor do secret `VPS_SSH_KEY` no GitHub.
+
+### Configurar Nginx no VPS
+
+Crie o arquivo `/etc/nginx/sites-available/brasiltec`:
+
+```nginx
+server {
+    listen 80;
+    server_name brasiltec.net.br www.brasiltec.net.br;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Ative e recarregue:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/brasiltec /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Variáveis de ambiente no VPS
+
+Crie o arquivo `/var/www/brasiltec/.env` com as variáveis de produção (baseado em `.env.example`).
+O PM2 carrega esse arquivo automaticamente via `ecosystem.config.cjs`.
+
 ## Requisitos
 
 - Node.js instalado
