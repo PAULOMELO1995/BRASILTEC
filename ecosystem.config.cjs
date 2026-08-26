@@ -4,7 +4,7 @@ module.exports = {
   apps: [
     {
       name: "brasiltec",
-      script: "./dist/server/server.js",
+      script: "./.output/server/index.mjs",
       instances: 1,
       autorestart: true,
       watch: false,

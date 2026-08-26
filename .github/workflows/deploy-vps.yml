@@ -35,7 +35,7 @@ jobs:
       - name: Compactar artefatos de deploy
         run: |
           tar -czf deploy.tar.gz \
-            dist/ \
+            .output/ \
             package.json \
             package-lock.json \
             ecosystem.config.cjs
@@ -67,6 +67,9 @@ jobs:
             mkdir -p $APP_DIR
             tar -xzf /tmp/brasiltec/deploy.tar.gz -C $APP_DIR
             rm -rf /tmp/brasiltec
+
+            # Garantir diretório de dados para SQLite
+            mkdir -p $APP_DIR/.data
 
             # Instalar dependências de produção
             cd $APP_DIR
