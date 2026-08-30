@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <section class="card">
+    <h1>Checkout</h1>
+    <div class="product-box">
+      <h2>Produto</h2>
+      <p>Plano de acesso Brasiltec</p>
+      <p><strong>R$ 99,00</strong></p>
+      <form method="post" action="{{ url_for('checkout.checkout') }}">
+        <button type="submit">Finalizar compra</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

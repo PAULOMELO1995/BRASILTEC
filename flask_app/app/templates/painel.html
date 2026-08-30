@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <section class="card dashboard-shell">
+    <h1>Painel</h1>
+    <p>Bem-vindo(a), {{ user.nome }}.</p>
+    <p>Seu e-mail: {{ user.email }}</p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span>Usuários</span>
+        <strong>{{ stats.usuarios }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Pedidos</span>
+        <strong>{{ stats.pedidos }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Suporte</span>
+        <strong>{{ stats.suporte }}</strong>
+      </div>
+    </div>
+
+    <div class="dashboard-sections">
+      <div class="panel-box">
+        <h2>Últimos pedidos</h2>
+        {% if pedidos %}
+          <ul>
+            {% for pedido in pedidos %}
+              <li>{{ pedido.produto }} — {{ pedido.status }} — {{ pedido.created_at.strftime('%d/%m/%Y') }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Nenhum pedido registrado.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel-box">
+        <h2>Mensagens recentes</h2>
+        {% if mensagens %}
+          <ul>
+            {% for mensagem in mensagens %}
+              <li>{{ mensagem.nome }} — {{ mensagem.mensagem[:60] }}...</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Nenhuma mensagem de suporte.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

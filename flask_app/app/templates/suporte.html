@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <section class="card">
+    <h1>Suporte</h1>
+    <form method="post" action="{{ url_for('suporte.suporte') }}">
+      <div>
+        <label for="nome">Nome</label>
+        <input id="nome" name="nome" type="text" placeholder="Seu nome" required>
+      </div>
+      <div>
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" placeholder="seu@email.com" required>
+      </div>
+      <div>
+        <label for="mensagem">Mensagem</label>
+        <textarea id="mensagem" name="mensagem" rows="5" placeholder="Descreva seu problema" required></textarea>
+      </div>
+      <button type="submit">Enviar</button>
+    </form>
+  </section>
+{% endblock %}

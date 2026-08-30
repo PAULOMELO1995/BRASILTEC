@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <section class="card dashboard-shell">
+    <h1>Admin</h1>
+    <p>Dashboard administrativo do Brasiltec.</p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span>Usuários</span>
+        <strong>{{ stats.usuarios }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Pedidos</span>
+        <strong>{{ stats.pedidos }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>Suporte</span>
+        <strong>{{ stats.suporte }}</strong>
+      </div>
+    </div>
+
+    <div class="dashboard-sections">
+      <div class="panel-box">
+        <h2>Usuários</h2>
+        {% if users %}
+          <ul>
+            {% for item in users %}
+              <li>{{ item.nome }} — {{ item.email }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Nenhum usuário cadastrado.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel-box">
+        <h2>Pedidos</h2>
+        {% if orders %}
+          <ul>
+            {% for pedido in orders %}
+              <li>{{ pedido.produto }} — {{ pedido.status }} — {{ pedido.valor }} BRL</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Nenhum pedido registrado.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel-box">
+        <h2>Mensagens de suporte</h2>
+        {% if support_messages %}
+          <ul>
+            {% for mensagem in support_messages %}
+              <li>{{ mensagem.nome }} — {{ mensagem.email }} — {{ mensagem.mensagem[:80] }}...</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Nenhuma mensagem de suporte.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Brasiltec Flask Application
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/brasiltec/flask_app
+Environment="PATH=/var/www/brasiltec/flask_app/.venv/bin"
+ExecStart=/var/www/brasiltec/flask_app/.venv/bin/gunicorn --config gunicorn.conf.py run:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
