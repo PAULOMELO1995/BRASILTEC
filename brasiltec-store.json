@@ -1,0 +1,130 @@
+{
+  "users": [
+    {
+      "id": "9af54750cc26a91dad649283",
+      "name": "Teste Segurança",
+      "email": "teste1785844712888@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "1d6e32faf11c4eee00df22ed7ae3d66f:2d235a7fc28f969b803e6549fd0c136a209231bd8e29c7c903eed9843e2ea7107f09ce333ebc316950921db0374d992860af3d3fdaf71f229cff5ab80f56047e",
+      "createdAt": "2026-08-04T11:58:33.332Z",
+      "updatedAt": "2026-08-04T11:58:33.332Z"
+    },
+    {
+      "id": "a150e78d66cd22dd6bc60bbe",
+      "name": "Usuario Real",
+      "email": "real1785844938797@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "aa7645bba2c9a492e11d92e5ed3111a3:74791fda83aa1d89242ac62eedc984b0c89658ca216d168dd7c50f7ad926ca48497b69a0f7dc332ba65745312234feb76bdaa836b7c1e5ab4c15c32ec164787b",
+      "createdAt": "2026-08-04T12:02:19.061Z",
+      "updatedAt": "2026-08-04T12:02:19.061Z"
+    },
+    {
+      "id": "e2dceaf38f54881372a79ac2",
+      "name": "Teste Final",
+      "email": "final20260804@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "8e6dde70168980c26516ec23edc7a58a:a81a47987853bdb84527c5657e06282d57464772444db8362d2503799e2cf6c320226dfb99ca6bb5b42bc9bba5e59bccb97f690938d2a9b61da6849d9a8cf31e",
+      "createdAt": "2026-08-04T12:02:39.641Z",
+      "updatedAt": "2026-08-04T12:02:39.641Z"
+    },
+    {
+      "id": "0bf43bcab847b220b349328b",
+      "name": "Usuario Cookie",
+      "email": "cookie1785845461070@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "004125e3a6a3c99bf7b14e7e60013316:df05264581d1f40f9a8a59b9d3827f1b7c14767ecdd90ed6ed1eb7af4d60573a9bee3e4d403758716939cf47a7bc2c04e5c12a2cc27b208e68db1ac510e9e389",
+      "createdAt": "2026-08-04T12:11:01.948Z",
+      "updatedAt": "2026-08-04T12:11:01.948Z"
+    },
+    {
+      "id": "2c04561461a8cee0ef3f1491",
+      "name": "Usuario Cookie",
+      "email": "cookie1785845791329@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "2b8b9991b8ea3599fe4a9dde552ad2a5:e77015eb8b47272d50fafb5cab428e6da9642232b9dabcbb4b40dc9c0126b0c2183585e7435afdb2d22e1ea8c2814d4c0d7f370ae1b4b49f27ed56f02014f40a",
+      "createdAt": "2026-08-04T12:16:31.945Z",
+      "updatedAt": "2026-08-04T12:16:31.945Z"
+    },
+    {
+      "id": "3f7e55f68ac6820797e93196",
+      "name": "Fluxo Final",
+      "email": "flow1785845815792@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "6ce41563abd78e4e41db2f07ffcc489f:56e70fe40d6701cfa577b79938bd3008b4e2a4cb9f801e0aa14de5acb55fd666a059ecce4ec426a8100b9e6e940827a4fdd16482804ed945d17bfbff3a70ab08",
+      "createdAt": "2026-08-04T12:16:57.073Z",
+      "updatedAt": "2026-08-04T12:16:57.073Z"
+    },
+    {
+      "id": "61228a55ddc37fbbca69fb6c",
+      "name": "Diag User",
+      "email": "diag1785845826166@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "23e32bacf7eafc0e4a5196107d75165f:b160f5ae95db3b5e1c0cb58c788d02ac8c00c4405f8e1081033e9956ad936d842effe71d181bfb685a68605c4a481cf67fe5992225e0ea898477c7cb7369699d",
+      "createdAt": "2026-08-04T12:17:07.245Z",
+      "updatedAt": "2026-08-04T12:17:15.490Z"
+    },
+    {
+      "id": "21251573093183cc9b3238d9",
+      "name": "Seguranca User",
+      "email": "secure1785846121695@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "6aa41cc322f640b1e7e9903a29ea919a:edc826a53abc55994a55c0d7741dac09cfbd9e3c8714be89d418e8a9742bf3de782f518ec5a14c0771c7349726b7a993ff88394facc8456be936fa0942548922",
+      "createdAt": "2026-08-04T12:22:03.876Z",
+      "updatedAt": "2026-08-04T12:22:03.876Z"
+    },
+    {
+      "id": "9afb11b7e7832ecaecd4942b",
+      "name": "Rotate User",
+      "email": "rotate1785853564740@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "e58bef4d41cd39e169a78e78b26dba55:e3f8862fc8c2fa59fcc71d48cc4f6059da7d18362476fcf17ae88766a493b0ca30fa06e517f4cd89ea786b25b5794b3e694faa021ac51f924df9d987d38012b4",
+      "createdAt": "2026-08-04T14:26:06.754Z",
+      "updatedAt": "2026-08-04T14:26:06.754Z"
+    },
+    {
+      "id": "4e1617f543c7f132d5432e5e",
+      "name": "Diag Rotate",
+      "email": "diagrot1785853601203@exemplo.com",
+      "businessType": "Produtor digital",
+      "passwordHash": "2756497243ab55a2b1cc92bef650e015:619b6fb0638fe172974b9c5e299eaacaf06064b6c84beef822d96c4da6042e1ede029c6814bce5bb91c2e5e3ce41b82151a2d050ed312dbadb4c2e1033ac030a",
+      "createdAt": "2026-08-04T14:26:42.176Z",
+      "updatedAt": "2026-08-04T14:26:42.176Z"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "3300d930e79ccbde27d132049e815dbd5a5ddf0dc4559119",
+      "userId": "9af54750cc26a91dad649283",
+      "createdAt": "2026-08-04T11:58:33.559Z",
+      "lastLoginAt": "2026-08-04T11:58:33.559Z"
+    },
+    {
+      "tokenHash": "13f77f7b653725851374236cc31260aaa455e05a98ec0709dcbf0dc7f7dde275",
+      "userId": "a150e78d66cd22dd6bc60bbe",
+      "createdAt": "2026-08-04T12:02:19.380Z",
+      "lastLoginAt": "2026-08-04T12:02:19.380Z",
+      "expiresAt": "2026-08-04T20:02:19.390Z"
+    },
+    {
+      "tokenHash": "8214767c099314abf6044a056d82f69f4aec8b48457b5a6989bc2845adce7044",
+      "userId": "0bf43bcab847b220b349328b",
+      "createdAt": "2026-08-04T12:11:02.215Z",
+      "lastLoginAt": "2026-08-04T12:11:02.215Z",
+      "expiresAt": "2026-08-04T20:11:02.216Z"
+    },
+    {
+      "tokenHash": "16760649d0fa52d740808ee4fb8024812346d4c4d4c7e25ee5c76164aeabba2c",
+      "userId": "9afb11b7e7832ecaecd4942b",
+      "createdAt": "2026-08-04T14:26:07.925Z",
+      "lastLoginAt": "2026-08-04T14:26:07.925Z",
+      "expiresAt": "2026-08-04T22:26:07.925Z"
+    },
+    {
+      "tokenHash": "beb73c3fdf8335b3c5951c0d412bbad79bff8f05af1ad033bdd9b251e3fd777f",
+      "userId": "4e1617f543c7f132d5432e5e",
+      "createdAt": "2026-08-04T14:26:42.395Z",
+      "lastLoginAt": "2026-08-04T14:26:59.661Z",
+      "expiresAt": "2026-08-04T22:26:59.661Z"
+    }
+  ]
+}
