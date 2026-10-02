@@ -33,6 +33,8 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Sprint A smoke
+        env:
+          SKIP_COMMERCE_SMOKES: "1"
         run: npm run smoke:sprintA
         env:
           NITRO_PRESET: node

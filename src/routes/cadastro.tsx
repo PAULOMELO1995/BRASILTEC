@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { PageShell } from "@/components/site/PageShell";
 import { registerUser } from "@/lib/auth-server";
 
@@ -26,6 +27,10 @@ function Cadastro() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   if (pathname !== "/cadastro") {
     return <Outlet />;
@@ -57,6 +62,7 @@ function Cadastro() {
     }
 
     if (submitting) return;
+    setError(null);
     setSubmitting(true);
 
     registerUser({ data: { name: nome, email, password: senha, businessType: tipo } })
@@ -76,7 +82,7 @@ function Cadastro() {
           <span className="eyebrow">Cadastro</span>
           <h1 className="mt-4 text-4xl md:text-5xl">Criar conta</h1>
           <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-            Nome, email, senha e confirmação para iniciar sua operação na plataforma.
+            Cadastre seus dados para criar uma conta e acessar a plataforma.
           </p>
           <ul className="mt-8 space-y-3 text-sm text-muted-foreground">
             {[
@@ -98,19 +104,19 @@ function Cadastro() {
               <label className="field-label" htmlFor="nome">
                 Nome completo
               </label>
-              <input id="nome" name="nome" className="field-input" placeholder="Como você se chama" />
+              <input id="nome" name="nome" type="text" autoComplete="name" required minLength={3} className="field-input" placeholder="Como você se chama" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label" htmlFor="email">
                 Email
               </label>
-              <input id="email" name="email" type="email" className="field-input" placeholder="voce@email.com" />
+              <input id="email" name="email" type="email" autoComplete="email" required className="field-input" placeholder="voce@email.com" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label" htmlFor="tipo">
                 Tipo de negócio
               </label>
-              <select id="tipo" name="tipo" className="field-input" defaultValue={businessTypes[0]}>
+              <select id="tipo" name="tipo" required className="field-input" defaultValue={businessTypes[0]}>
                 {businessTypes.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -122,18 +128,112 @@ function Cadastro() {
               <label className="field-label" htmlFor="senha">
                 Senha
               </label>
-              <input id="senha" name="senha" type="password" className="field-input" placeholder="Mínimo 8 caracteres" />
+              <div className="relative">
+                <input
+                  id="senha"
+                  name="senha"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="field-input pr-12"
+                  placeholder="Mínimo 8 caracteres"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setError(null);
+                  }}
+                  aria-describedby="password-guidance"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} aria-hidden="true" />
+                  ) : (
+                    <Eye size={18} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
             <div>
               <label className="field-label" htmlFor="confirmar">
                 Confirmar senha
               </label>
-              <input id="confirmar" name="confirmar" type="password" className="field-input" placeholder="Repita a senha" />
+              <div className="relative">
+                <input
+                  id="confirmar"
+                  name="confirmar"
+                  type={showConfirmation ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="field-input pr-12"
+                  placeholder="Repita a senha"
+                  value={confirmation}
+                  onChange={(event) => {
+                    setConfirmation(event.target.value);
+                    setError(null);
+                  }}
+                  aria-describedby="confirmation-guidance"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmation((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label={
+                    showConfirmation
+                      ? "Ocultar confirmação da senha"
+                      : "Mostrar confirmação da senha"
+                  }
+                  aria-pressed={showConfirmation}
+                >
+                  {showConfirmation ? (
+                    <EyeOff size={18} aria-hidden="true" />
+                  ) : (
+                    <Eye size={18} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
+          <div
+            className="mt-3 space-y-1 text-xs"
+            id="password-guidance"
+            aria-live="polite"
+          >
+            <p
+              className={
+                password.length >= 8 ? "text-primary" : "text-muted-foreground"
+              }
+            >
+              {password.length >= 8
+                ? "Senha com pelo menos 8 caracteres"
+                : "Use pelo menos 8 caracteres na senha"}
+            </p>
+            {confirmation ? (
+              <p
+                id="confirmation-guidance"
+                className={
+                  password === confirmation
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }
+              >
+                {password === confirmation
+                  ? "As senhas coincidem"
+                  : "As senhas ainda não coincidem"}
+              </p>
+            ) : null}
+          </div>
+
           {error ? (
-            <p className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <p role="alert" className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           ) : null}
@@ -141,6 +241,10 @@ function Cadastro() {
           <button type="submit" disabled={submitting} className="btn-base btn-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-70">
             {submitting ? "Criando conta..." : "Cadastrar"}
           </button>
+
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Após o cadastro, sua conta ficará salva e você poderá entrar com este email e senha.
+          </p>
 
           <div className="mt-4 flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />

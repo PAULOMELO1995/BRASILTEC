@@ -46,7 +46,7 @@ function CadastroConfirmacao() {
           <span className="eyebrow">Cadastro concluído</span>
           <h1 className="mt-4 text-3xl md:text-4xl">Sua conta foi criada com sucesso</h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            A próxima rota foi gerada após o envio do formulário. Você já pode seguir para a navegação da conta.
+            Seus dados foram registrados e sua sessão já está ativa. Você pode acessar o painel agora.
           </p>
 
           <div className="mt-8 grid gap-4 rounded-3xl border border-border/60 bg-background/70 p-5 text-sm md:grid-cols-3">
@@ -65,8 +65,8 @@ function CadastroConfirmacao() {
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/" className="btn-base btn-primary">
-              Ir para o início
+            <Link to="/painel" className="btn-base btn-primary">
+              Acessar painel
             </Link>
             <Link to="/planos" className="btn-base btn-ghost">
               Ver planos

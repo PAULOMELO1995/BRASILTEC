@@ -286,3 +286,22 @@
   background-clip: text;
   color: transparent;
 }
+
+:root {
+  --verde-fundo: #16a34a;
+  --verde-botao: #15803d;
+  --texto-botao: #ffffff;
+}
+
+html,
+body {
+  background-color: var(--verde-fundo);
+}
+
+button,
+.btn,
+[type="button"],
+[type="submit"] {
+  background-color: var(--verde-botao);
+  color: var(--texto-botao);
+}

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie, getRequestHost, getRequestProtocol, setCookie } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
+  authenticateOrCreateGoogleUser,
   authenticateUser,
   buyProduct,
   getAdminOverview,
@@ -52,6 +53,8 @@ import {
   type AdminRole,
   type BusinessType,
 } from "./auth-store";
+
+import { getEnv, getEnvBoolean, getEnvList } from "./env";
 
 const sessionCookieName = "brasiltec_session";
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -114,13 +117,6 @@ function clearRateLimit(key: string): void {
   attemptStore.delete(key);
 }
 
-function parseEnvEmailList(value: string | undefined): string[] {
-  return (value ?? "")
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 function readSessionCookie(): string {
   const token = getCookie(sessionCookieName);
   if (!token) {
@@ -140,9 +136,9 @@ async function requireSessionUser() {
 
 function resolveAdminRoleFromEnv(email: string): AdminRole {
   const normalizedEmail = email.trim().toLowerCase();
-  const admins = parseEnvEmailList(process.env["ADMIN_EMAILS"]);
-  const moderators = parseEnvEmailList(process.env["MODERATOR_EMAILS"]);
-  const viewers = parseEnvEmailList(process.env["ADMIN_VIEWER_EMAILS"]);
+  const admins = getEnvList("ADMIN_EMAILS");
+  const moderators = getEnvList("MODERATOR_EMAILS");
+  const viewers = getEnvList("ADMIN_VIEWER_EMAILS");
 
   const hasRoleConfig = admins.length > 0 || moderators.length > 0 || viewers.length > 0;
 
@@ -169,9 +165,9 @@ async function resolveAdminRole(user: { id: string; email: string }): Promise<Ad
   }
 
   const hasAnyRoleConfig =
-    parseEnvEmailList(process.env["ADMIN_EMAILS"]).length > 0 ||
-    parseEnvEmailList(process.env["MODERATOR_EMAILS"]).length > 0 ||
-    parseEnvEmailList(process.env["ADMIN_VIEWER_EMAILS"]).length > 0;
+    getEnvList("ADMIN_EMAILS").length > 0 ||
+    getEnvList("MODERATOR_EMAILS").length > 0 ||
+    getEnvList("ADMIN_VIEWER_EMAILS").length > 0;
 
   // For local/unconfigured environments, bootstrap first access as admin to preserve existing developer workflow.
   if (!hasAnyRoleConfig) {
@@ -215,6 +211,11 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
+});
+
+const googleAuthSchema = z.object({
+  credential: z.string().trim().min(20),
+  businessType: z.enum(businessTypes).optional(),
 });
 
 const forgotPasswordSchema = z.object({
@@ -341,14 +342,46 @@ const adminPaymentReconcileSchema = z.object({
   minOrderAgeMinutes: z.number().int().min(0).max(1440).optional(),
 });
 
+type GoogleTokenInfo = {
+  aud?: string;
+  email?: string;
+  email_verified?: string;
+  name?: string;
+};
+
+async function verifyGoogleCredential(credential: string): Promise<{ email: string; name: string }> {
+  const clientId = getEnv("GOOGLE_CLIENT_ID") || getEnv("VITE_GOOGLE_CLIENT_ID");
+  if (!clientId) {
+    throw new Error("Google Login não configurado. Defina GOOGLE_CLIENT_ID no ambiente.");
+  }
+
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+  if (!response.ok) {
+    throw new Error("Token Google inválido ou expirado.");
+  }
+
+  const tokenInfo = (await response.json()) as GoogleTokenInfo;
+  if (tokenInfo.aud !== clientId) {
+    throw new Error("Token Google inválido para este projeto.");
+  }
+
+  const email = tokenInfo.email?.trim().toLowerCase() ?? "";
+  if (!email || tokenInfo.email_verified !== "true") {
+    throw new Error("Conta Google sem email verificado.");
+  }
+
+  const name = tokenInfo.name?.trim() || email.split("@")[0] || "Usuário";
+  return { email, name };
+}
+
 function supportRateLimitKey(senderEmail: string, recipientEmail: string): string {
   const host = getRequestHost().toLowerCase();
   return `support:${host}:${normalizeKeyValue(senderEmail)}:${normalizeKeyValue(recipientEmail)}`;
 }
 
 function supportRecipientsAllowlist(): string[] {
-  const fromEnv = parseEnvEmailList(process.env["SUPPORT_ALLOWED_RECIPIENTS"]);
-  const defaultRecipient = normalizeKeyValue(process.env["SUPPORT_DEFAULT_RECIPIENT"] ?? "suporte@brasiltec.com");
+  const fromEnv = getEnvList("SUPPORT_ALLOWED_RECIPIENTS");
+  const defaultRecipient = normalizeKeyValue(getEnv("SUPPORT_DEFAULT_RECIPIENT", "suporte@brasiltec.net.br"));
   if (defaultRecipient && !fromEnv.includes(defaultRecipient)) {
     fromEnv.push(defaultRecipient);
   }
@@ -383,11 +416,18 @@ type SupportEmailDispatchInput = {
 
 type SupportEmailDispatchResult = {
   delivered: boolean;
-  provider: "resend" | "log";
+  provider: "resend" | "smtp" | "log";
   messageId: string | null;
 };
 
-async function dispatchSupportEmail(input: SupportEmailDispatchInput): Promise<SupportEmailDispatchResult> {
+type PlatformEmailDispatchInput = {
+  to: string;
+  subject: string;
+  text: string;
+  replyTo?: string;
+};
+
+async function dispatchPlatformEmail(input: PlatformEmailDispatchInput): Promise<SupportEmailDispatchResult> {
   const provider = (process.env["SUPPORT_EMAIL_PROVIDER"] ?? "log").trim().toLowerCase();
 
   if (provider === "resend") {
@@ -399,17 +439,10 @@ async function dispatchSupportEmail(input: SupportEmailDispatchInput): Promise<S
 
     const payload = {
       from: fromEmail,
-      to: [input.recipientEmail],
-      subject: `[Suporte Brasiltec] ${input.subject}`,
-      text: [
-        `Nome: ${input.senderName}`,
-        `Email: ${input.senderEmail}`,
-        `Destinatário: ${input.recipientEmail}`,
-        "",
-        "Mensagem:",
-        input.message,
-      ].join("\n"),
-      reply_to: input.senderEmail,
+      to: [input.to],
+      subject: input.subject,
+      text: input.text,
+      reply_to: input.replyTo,
     };
 
     const response = await fetch("https://api.resend.com/emails", {
@@ -434,23 +467,98 @@ async function dispatchSupportEmail(input: SupportEmailDispatchInput): Promise<S
     };
   }
 
-  if (provider !== "log") {
-    throw new Error("Provedor de email inválido. Use SUPPORT_EMAIL_PROVIDER=log ou resend.");
+  if (provider === "smtp") {
+    const { default: nodemailer } = await import("nodemailer");
+
+    const host = getEnv("SMTP_HOST", "smtp.gmail.com");
+    const port = Number(getEnv("SMTP_PORT", "465"));
+    const secure = getEnvBoolean("SMTP_SECURE", port === 465);
+    const user = getEnv("SMTP_USER");
+    const pass = getEnv("SMTP_PASS");
+    const fromEmail = getEnv("SUPPORT_EMAIL_FROM") || getEnv("SMTP_FROM");
+
+    if (!host || !port || !user || !pass || !fromEmail) {
+      throw new Error(
+        "Configuração SMTP incompleta. Defina SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SUPPORT_EMAIL_FROM (ou SMTP_FROM).",
+      );
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: {
+        user,
+        pass,
+      },
+    });
+
+    const result = await transporter.sendMail({
+      from: fromEmail,
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      replyTo: input.replyTo,
+    });
+
+    return {
+      delivered: true,
+      provider: "smtp",
+      messageId: result.messageId ?? null,
+    };
   }
 
-  console.info("[support-email:log]", {
-    to: input.recipientEmail,
-    from: input.senderEmail,
-    senderName: input.senderName,
-    subject: input.subject,
-    message: input.message,
-  });
+  if (provider !== "log") {
+    throw new Error("Provedor de email inválido. Use SUPPORT_EMAIL_PROVIDER=log, resend ou smtp.");
+  }
+
+  console.info("[platform-email:log]", { ...input });
 
   return {
     delivered: false,
     provider: "log",
     messageId: null,
   };
+}
+
+async function dispatchSupportEmail(input: SupportEmailDispatchInput): Promise<SupportEmailDispatchResult> {
+  return dispatchPlatformEmail({
+    to: input.recipientEmail,
+    subject: `[Suporte Brasiltec] ${input.subject}`,
+    text: [
+      `Nome: ${input.senderName}`,
+      `Email: ${input.senderEmail}`,
+      `Destinatário: ${input.recipientEmail}`,
+      "",
+      "Mensagem:",
+      input.message,
+    ].join("\n"),
+    replyTo: input.senderEmail,
+  });
+}
+
+async function maybeSendWelcomeEmail(input: { name: string; email: string }): Promise<void> {
+  if (!getEnvBoolean("WELCOME_EMAIL_ENABLED", false)) {
+    return;
+  }
+
+  const subject = getEnv("WELCOME_EMAIL_SUBJECT", "Bem-vindo(a) a Brasiltec");
+  const appBaseUrl = getEnv("APP_BASE_URL", "https://brasiltec.net.br");
+
+  try {
+    await dispatchPlatformEmail({
+      to: input.email,
+      subject,
+      text: [
+        `Olá ${input.name},`,
+        "",
+        "Seu cadastro na Brasiltec foi concluído com sucesso.",
+        `Acesse: ${appBaseUrl}`,
+      ].join("\n"),
+    });
+  } catch (error) {
+    console.error("Falha ao enviar email de boas-vindas:", error);
+  }
 }
 
 const adminPlatformSettingUpsertSchema = z.object({
@@ -499,6 +607,7 @@ export const registerUser = createServerFn({ method: "POST" })
 
     const session = await createSession(user.id);
     setSessionCookie(session.tokenHash);
+    await maybeSendWelcomeEmail({ name: user.name, email: user.email });
     clearRateLimit(rateLimitKey);
     return {
       user: {
@@ -524,6 +633,34 @@ export const loginUser = createServerFn({ method: "POST" })
     const session = await createSession(user.id);
     setSessionCookie(session.tokenHash);
     clearRateLimit(rateLimitKey);
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        businessType: user.businessType,
+      },
+    };
+  });
+
+export const authenticateWithGoogle = createServerFn({ method: "POST" })
+  .validator(googleAuthSchema)
+  .handler(async ({ data }) => {
+    const identity = await verifyGoogleCredential(data.credential);
+    const rateLimitKey = getRateLimitKey("login", identity.email);
+    enforceRateLimit(rateLimitKey);
+
+    const user = await authenticateOrCreateGoogleUser({
+      email: identity.email,
+      name: identity.name,
+      businessType: data.businessType as BusinessType | undefined,
+    });
+
+    const session = await createSession(user.id);
+    setSessionCookie(session.tokenHash);
+    await maybeSendWelcomeEmail({ name: user.name, email: user.email });
+    clearRateLimit(rateLimitKey);
+
     return {
       user: {
         id: user.id,

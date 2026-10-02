@@ -158,7 +158,7 @@ type PaymentOpsData = {
 };
 
 type PaymentReconciliationData = {
-  provider: "mercado_pago";
+  provider: "disabled" | string;
   checkedOrders: number;
   updatedOrders: number;
   unchangedOrders: number;

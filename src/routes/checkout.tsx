@@ -254,7 +254,7 @@ function CheckoutPage() {
 
               {gatewayPendingOrderId && gatewayCheckoutUrl ? (
                 <a href={gatewayCheckoutUrl} target="_blank" rel="noreferrer" className="btn-base btn-ghost mt-3 inline-flex">
-                  Ir para pagamento Mercado Pago
+                  Ir para pagamento
                 </a>
               ) : null}
 
