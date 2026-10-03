@@ -53,7 +53,7 @@ server {
     server_name brasiltec.net.br www.brasiltec.net.br;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -76,7 +76,28 @@ sudo nginx -t && sudo systemctl reload nginx
 ### Variáveis de ambiente no VPS
 
 Crie o arquivo `/var/www/brasiltec/.env` com as variáveis de produção (baseado em `.env.example`).
-O PM2 carrega esse arquivo automaticamente via `ecosystem.config.cjs`.
+O Node.js carrega esse arquivo usando `--env-file-if-exists=.env`, tanto em `npm start` quanto pelo PM2.
+Use Node.js 22.12 ou superior.
+
+### Validar cadastro e publicar a build correta
+
+```powershell
+npm run build
+npm run test:cadastro
+npm start
+```
+
+O build usa o preset Node por padrão. Para outro destino, defina `NITRO_PRESET` explicitamente.
+O teste inicia a build de produção em uma porta separada e usa um arquivo SQLite temporário, sem alterar o banco real.
+Ele verifica a gravação do usuário e da senha protegida no banco, sessão, acesso ao painel,
+novo login e rejeição de email duplicado. O arquivo temporário é removido ao terminar.
+
+Em produção, o Nginx deve encaminhar para o processo `npm start`/PM2 na porta 3001,
+nunca para `npm run dev` ou para arquivos HTML copiados de uma sessão de desenvolvimento.
+Se o navegador requisitar `/@id/virtual:tanstack-start-dev-client-entry`, a página não está
+usando a build de produção: esse script depende do Vite e sua falha impede o envio do cadastro.
+Após publicar os artefatos e configurar o banco no `.env`, reinicie com
+`pm2 startOrRestart ecosystem.config.cjs --env production --update-env` e valide o domínio.
 
 ## Requisitos
 

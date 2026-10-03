@@ -21,7 +21,7 @@ export const Route = createFileRoute("/cadastro")({
   component: Cadastro,
 });
 
-const businessTypes = ["Produtor digital", "Infoprodutor", "Afiliado", "Agência", "E-commerce", "Serviços"];
+const businessTypes = ["Produtor digital", "Infoprodutor", "Afiliado", "Agência", "E-commerce", "Serviços"] as const;
 
 function Cadastro() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -42,12 +42,17 @@ function Cadastro() {
     const formData = new FormData(event.currentTarget);
     const nome = String(formData.get("nome") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
-    const tipo = String(formData.get("tipo") ?? businessTypes[0]);
+    const tipo = businessTypes.find((type) => type === formData.get("tipo"));
     const senha = String(formData.get("senha") ?? "");
     const confirmar = String(formData.get("confirmar") ?? "");
 
     if (!nome || !email || !senha || !confirmar) {
       setError("Preencha todos os campos para continuar.");
+      return;
+    }
+
+    if (!tipo) {
+      setError("Selecione um tipo de negócio válido.");
       return;
     }
 

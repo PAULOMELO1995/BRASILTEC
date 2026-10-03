@@ -32,6 +32,12 @@ jobs:
           NITRO_PRESET: node
           NODE_ENV: production
 
+      - name: Instalar navegador de teste
+        run: npx playwright install --with-deps chromium
+
+      - name: Validar cadastro na build de produção
+        run: npm run test:cadastro
+
       - name: Compactar artefatos de deploy
         run: |
           tar -czf deploy.tar.gz \

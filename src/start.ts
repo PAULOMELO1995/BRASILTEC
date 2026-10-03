@@ -1,10 +1,6 @@
-import * as ReactStart from "@tanstack/react-start";
+import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
-
-const createStart = ReactStart.createStart;
-const createMiddleware = ReactStart.createMiddleware;
-const createCsrfMiddleware = (ReactStart as { createCsrfMiddleware?: unknown }).createCsrfMiddleware;
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -21,13 +17,9 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-// createCsrfMiddleware may be undefined after edge bundling; fall back to a passthrough.
-const csrfMiddleware =
-  typeof createCsrfMiddleware === "function"
-    ? (createCsrfMiddleware as (options: { filter: (ctx: { handlerType?: string }) => boolean }) => ReturnType<typeof createMiddleware>)({
-        filter: (ctx) => ctx.handlerType === "serverFn",
-      })
-    : createMiddleware().server(async ({ next }) => next());
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === "serverFn",
+});
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],

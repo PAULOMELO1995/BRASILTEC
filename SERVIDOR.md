@@ -34,6 +34,7 @@ Mesmo assim, para aprender, testar e até operar um projeto pequeno, esse caminh
 Baixe a versão mais recente do Ubuntu Server ou Ubuntu Desktop.
 
 ### Passos:
+
 1. Baixe a ISO do Ubuntu.
 2. Grave em uma USB com Rufus ou BalenaEtcher.
 3. Inicialize o computador pela USB.
@@ -57,13 +58,13 @@ sudo apt upgrade -y
 ## 5) Instale o Node.js
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 node -v
 npm -v
 ```
 
-Se os comandos funcionarem, o Node foi instalado corretamente.
+Use Node.js 22.12 ou superior para executar a build de produção e carregar o `.env`.
 
 ---
 
@@ -181,7 +182,7 @@ Se o projeto não usa build, siga a forma correta do projeto. O importante é de
 
 ```bash
 cd /var/www/brasiltec
-pm2 start npm --name brasiltec -- start
+pm2 startOrRestart ecosystem.config.cjs --env production --update-env
 ```
 
 Verifique:
@@ -262,16 +263,20 @@ Se aparecer a aplicação, a parte do servidor já está funcionando.
 Para que o servidor fique disponível fora da rede local, você precisa de uma das opções:
 
 ### Opção A — IP público real
+
 Seu provedor de internet oferece IP público.
 
 ### Opção B — roteador com redirecionamento de porta
+
 No roteador, abra as portas:
+
 - 80
 - 443
 
 Redirecione para o computador que está rodando o servidor.
 
 ### Opção C — DDNS
+
 Se o IP muda, use DDNS para manter o nome atualizado.
 
 ---
@@ -306,6 +311,7 @@ Isso ativa HTTPS automaticamente.
 ## 18) O que você precisa para manter o servidor estável
 
 ### Recomendado:
+
 - manter o computador ligado
 - configurar backup
 - usar PM2 para a aplicação
@@ -353,6 +359,7 @@ Seu computador pode ser criado como servidor próprio, mas ele precisa ser uma m
 ## 21) Importante sobre produção
 
 Essa configuração funciona muito bem para:
+
 - estudo
 - projetos pessoais
 - testes

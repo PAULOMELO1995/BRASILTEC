@@ -9,7 +9,7 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: "512M",
-      env_file: ".env",
+      node_args: "--env-file-if-exists=.env",
       env_production: {
         NODE_ENV: "production",
         PORT: 3001,

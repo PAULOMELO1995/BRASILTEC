@@ -16,19 +16,9 @@ export async function registerAndReachConfirmation(page: Page, input: RegisterIn
   await page.locator("#confirmar").fill(password);
   await page.locator('button[type="submit"]').click();
 
-  let reachedConfirmation = false;
-  try {
-    await page.waitForURL("**/cadastro/confirmacao**", { waitUntil: "domcontentloaded", timeout: 20_000 });
-    reachedConfirmation = true;
-  } catch {
-    // Fallback for intermittent client-side navigation stalls during smoke runs.
-  }
-
-  if (!reachedConfirmation) {
-    await page.goto("/cadastro/confirmacao", { waitUntil: "domcontentloaded" });
-  }
-
+  await page.waitForURL("**/cadastro/confirmacao**", { waitUntil: "domcontentloaded", timeout: 30_000 });
   await expect(page.getByRole("heading", { name: /Sua conta foi criada com sucesso/i })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(input.email, { exact: true })).toBeVisible();
 }
 
 export async function loginAndReachPanel(page: Page, email: string, password = "senha1234"): Promise<void> {

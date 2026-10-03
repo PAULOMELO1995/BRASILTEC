@@ -54,7 +54,7 @@ const paymentAlertLastSentAt = new Map<string, number>();
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
+      ({ default: entry }) => entry as ServerEntry,
     );
   }
   return serverEntryPromise;

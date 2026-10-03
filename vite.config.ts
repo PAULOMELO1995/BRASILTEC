@@ -9,6 +9,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   // Cloudflare build tooling expects a top-level Vite plugins array it can patch.
   plugins: [],
+  nitro: {
+    preset: process.env["NITRO_PRESET"] || "node",
+  },
   vite: {
     server: {
       host: true,
