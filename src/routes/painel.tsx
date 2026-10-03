@@ -21,7 +21,6 @@ function Painel() {
   const [email, setEmail] = useState("Carregando...");
   const [name, setName] = useState("Carregando...");
   const [businessType, setBusinessType] = useState("Carregando...");
-  const [storageMode, setStorageMode] = useState<"postgres" | "sqlite" | "local-file">("local-file");
   const [dashboardWarning, setDashboardWarning] = useState<string | null>(null);
   const [userCount, setUserCount] = useState(0);
   const [sessionCount, setSessionCount] = useState(0);
@@ -45,7 +44,6 @@ function Painel() {
         setUserCount(dashboard.userCount);
         setSessionCount(dashboard.sessionCount);
         setSessionsExpiringSoon(dashboard.sessionsExpiringSoon);
-        setStorageMode(dashboard.storageMode === "postgres" || dashboard.storageMode === "sqlite" ? dashboard.storageMode : "local-file");
         setByBusiness(dashboard.byBusiness);
         setLatestUsers(dashboard.latestUsers);
       })
@@ -85,7 +83,7 @@ function Painel() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
             <div className="panel p-5">
               <p className="text-sm text-muted-foreground">Usuários cadastrados</p>
               <p className="mt-2 text-3xl font-semibold">{userCount}</p>
@@ -93,13 +91,6 @@ function Painel() {
             <div className="panel p-5">
               <p className="text-sm text-muted-foreground">Sessões ativas</p>
               <p className="mt-2 text-3xl font-semibold">{sessionCount}</p>
-            </div>
-            <div className="panel p-5">
-              <p className="text-sm text-muted-foreground">Banco protegido</p>
-              <p className="mt-2 text-sm leading-relaxed text-foreground">Senhas com scrypt + sessões com expiração de 8h e token hasheado.</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Persistência: {storageMode === "postgres" ? "PostgreSQL" : storageMode === "sqlite" ? "SQLite" : "Arquivo local (.data)"}
-              </p>
             </div>
           </div>
 

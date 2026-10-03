@@ -221,6 +221,10 @@ test("dashboard navigation groups routes and highlights product subpages on desk
   await page.getByRole("link", { name: "Acessar painel", exact: true }).click();
 
   const sidebar = page.getByRole("complementary", { name: "Menu lateral" });
+  await expect(page.getByText("Usuários cadastrados", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sessões ativas", { exact: true })).toBeVisible();
+  await expect(page.getByText("Banco protegido", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Senhas com scrypt|Persistência:/)).toHaveCount(0);
   await expect(sidebar).toBeVisible();
   await expect(sidebar.getByText("Visão geral", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Meu negócio", { exact: true })).toBeVisible();
