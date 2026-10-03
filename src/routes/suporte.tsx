@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell, PageHeader } from "@/components/site/PageShell";
 import { sendSupportContactEmail } from "@/lib/auth-server";
+import { SUPPORT_EMAIL } from "@/lib/site-contact";
 
 export const Route = createFileRoute("/suporte")({
   head: () => ({
@@ -132,7 +133,7 @@ function Suporte() {
                 name="destinatario"
                 type="email"
                 className="field-input"
-                placeholder="suporte@brasiltec.com"
+                placeholder={SUPPORT_EMAIL}
               />
               <p className="mt-1 text-xs text-muted-foreground">Se não informar, usamos o destinatário padrão configurado.</p>
             </div>
@@ -169,7 +170,10 @@ function Suporte() {
             <h2 className="text-lg">Canais de atendimento</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>
-                <span className="font-medium text-foreground">Email:</span> suporte@brasiltec.com
+                <span className="font-medium text-foreground">Email:</span>{" "}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="break-all hover:underline">
+                  {SUPPORT_EMAIL}
+                </a>
               </li>
               <li>
                 <span className="font-medium text-foreground">WhatsApp:</span> +258 84 000 0000

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie, getCookie, getRequestHost, getRequestProtocol, setCookie } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { SUPPORT_EMAIL } from "@/lib/site-contact";
 import {
   authenticateOrCreateGoogleUser,
   authenticateUser,
@@ -381,7 +382,7 @@ function supportRateLimitKey(senderEmail: string, recipientEmail: string): strin
 
 function supportRecipientsAllowlist(): string[] {
   const fromEnv = getEnvList("SUPPORT_ALLOWED_RECIPIENTS");
-  const defaultRecipient = normalizeKeyValue(getEnv("SUPPORT_DEFAULT_RECIPIENT", "suporte@brasiltec.net.br"));
+  const defaultRecipient = normalizeKeyValue(getEnv("SUPPORT_DEFAULT_RECIPIENT", SUPPORT_EMAIL));
   if (defaultRecipient && !fromEnv.includes(defaultRecipient)) {
     fromEnv.push(defaultRecipient);
   }
