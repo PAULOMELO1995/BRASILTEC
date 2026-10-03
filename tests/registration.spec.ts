@@ -6,6 +6,16 @@ import {
   registerAndReachConfirmation,
 } from "./helpers/auth";
 
+test("homepage keeps signup and flow links without promotional statistics", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Criar minha conta", exact: true })).toHaveAttribute("href", "/cadastro");
+  await expect(page.getByRole("link", { name: "Ver o fluxo", exact: true })).toHaveAttribute("href", "/como-funciona");
+  await expect(page.getByText("+24k", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("99,9%", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("24/7", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/vendas processadas|suporte humano/)).toHaveCount(0);
+});
+
 test("missing Google configuration explains the fallback on registration and login", async ({ page }) => {
   test.skip(process.env["GOOGLE_AUTH_TEST"] === "1", "Uses the normal build without a Google client ID.");
   await page.goto("/cadastro");

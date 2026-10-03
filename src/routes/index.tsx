@@ -22,12 +22,6 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const stats = [
-  { value: "+24k", label: "vendas processadas" },
-  { value: "99,9%", label: "estabilidade" },
-  { value: "24/7", label: "suporte humano" },
-];
-
 const features = [
   {
     eyebrow: "Checkout intuitivo",
@@ -80,14 +74,6 @@ function Index() {
               </Link>
             </div>
 
-            <dl className="mt-10 grid gap-3 sm:grid-cols-3">
-              {stats.map((s) => (
-                <div key={s.label} className="panel card-hover px-5 py-4">
-                  <dt className="font-display text-2xl font-semibold">{s.value}</dt>
-                  <dd className="mt-1 text-sm text-muted-foreground">{s.label}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
 
           <aside className="panel flex flex-col gap-4 p-5 md:p-6">
