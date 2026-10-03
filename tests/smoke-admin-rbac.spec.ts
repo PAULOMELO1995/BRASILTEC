@@ -10,9 +10,8 @@ test("Admin role management keeps self-demotion guard", async ({ page }) => {
 
   await page.goto("/admin", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Painel administrativo inicial" })).toBeVisible();
-  const roleHeading = page.getByRole("heading", { name: "Gestão de papéis administrativos" });
-  await expect(roleHeading).toBeVisible();
-  const roleSection = roleHeading.locator("xpath=ancestor::div[contains(@class,'rounded-2xl')][1]");
+  const roleSection = page.getByTestId("role-management");
+  await expect(roleSection).toBeVisible();
   const selfGuardText = roleSection.getByText("Seu usuário não pode ser rebaixado por esta tela para evitar bloqueio administrativo.").first();
 
   if (await selfGuardText.isVisible()) {

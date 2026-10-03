@@ -6,6 +6,21 @@ import {
   registerAndReachConfirmation,
 } from "./helpers/auth";
 
+test("admin role controls remain available without introductory copy", async ({ page }) => {
+  await registerAndReachConfirmation(page, {
+    name: "Teste Admin",
+    email: "admin.copy@exemplo.com",
+  });
+  await page.goto("/admin");
+  const section = page.getByTestId("role-management");
+  await expect(section).toBeVisible();
+  await expect(section.getByRole("button", { name: "Atualizar papéis", exact: true })).toBeVisible();
+  await expect(section.getByRole("button", { name: "Salvar papel de admin.copy@exemplo.com", exact: true })).toBeVisible();
+  await expect(section.locator("select").first()).toBeVisible();
+  await expect(section.getByText("Gestão de papéis administrativos", { exact: true })).toHaveCount(0);
+  await expect(section.getByText(/Defina acesso de visualização|Promoções para admin exigem/)).toHaveCount(0);
+});
+
 test("support shows the Brasiltec Outlook contact and opens a direct email link", async ({ page }) => {
   await page.goto("/suporte");
   await expect(page.getByRole("link", { name: "brasiltec_net@outlook.com", exact: true })).toHaveAttribute("href", "mailto:brasiltec_net@outlook.com");

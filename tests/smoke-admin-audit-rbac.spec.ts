@@ -20,9 +20,8 @@ test("Admin RBAC audit supports filters and CSV export", async ({ browser }) => 
   await adminPage.goto("/admin", { waitUntil: "domcontentloaded" });
   await expect(adminPage.getByRole("heading", { name: "Painel administrativo inicial" })).toBeVisible();
 
-  const roleHeading = adminPage.getByRole("heading", { name: "Gestão de papéis administrativos" });
-  await expect(roleHeading).toBeVisible();
-  const roleSection = roleHeading.locator("xpath=ancestor::div[contains(@class,'rounded-2xl')][1]");
+  const roleSection = adminPage.getByTestId("role-management");
+  await expect(roleSection).toBeVisible();
   const targetRow = roleSection.locator("div.rounded-xl", { hasText: targetEmail }).first();
   await expect(targetRow).toBeVisible();
   await targetRow.locator("select").first().selectOption("viewer");

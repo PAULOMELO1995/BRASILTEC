@@ -962,13 +962,8 @@ function AdminPage() {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-border/60 bg-background/70 p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold">Gestão de papéis administrativos</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">Defina acesso de visualização, moderação e administração por usuário.</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Promoções para admin exigem confirmação secundária explícita.</p>
-                  </div>
+              <div className="mt-6 rounded-2xl border border-border/60 bg-background/70 p-5" data-testid="role-management">
+                <div className="flex flex-wrap justify-end gap-3">
                   <button
                     type="button"
                     className="btn-base btn-ghost"

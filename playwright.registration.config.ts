@@ -23,6 +23,9 @@ export default defineConfig({
       DATABASE_URL: "",
       SQLITE_PATH: process.env["REGISTRATION_TEST_SQLITE_PATH"] || ":memory:",
       WELCOME_EMAIL_ENABLED: "false",
+      ADMIN_EMAILS: "admin.copy@exemplo.com",
+      MODERATOR_EMAILS: "",
+      ADMIN_VIEWER_EMAILS: "",
     },
   },
 });

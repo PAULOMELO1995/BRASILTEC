@@ -19,10 +19,8 @@ test("Viewer can access admin in read-only mode and cannot moderate", async ({ b
   await loginAndReachPanel(adminPage, adminEmail);
 
   await adminPage.goto("/admin", { waitUntil: "domcontentloaded" });
-  const roleHeading = adminPage.getByRole("heading", { name: "Gestão de papéis administrativos" });
-  await expect(roleHeading).toBeVisible();
-
-  const roleSection = roleHeading.locator("xpath=ancestor::div[contains(@class,'rounded-2xl')][1]");
+  const roleSection = adminPage.getByTestId("role-management");
+  await expect(roleSection).toBeVisible();
   const viewerRow = roleSection.locator("div.rounded-xl", { hasText: viewerEmail }).first();
   await expect(viewerRow).toBeVisible();
 
