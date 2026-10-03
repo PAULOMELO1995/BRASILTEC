@@ -104,6 +104,40 @@ Após publicar os artefatos e configurar o banco no `.env`, reinicie com
 Caso o Nginx tenha um bloco `location /assets/` com `alias`, ele deve apontar para
 `/var/www/brasiltec-producao/.output/public/assets/`, não para a build antiga.
 
+## Cadastro e login com Google
+
+Cadastro e login usam Google Identity Services. No cadastro, o Google fornece nome e
+email verificado sem exigir senha local; o tipo de negócio selecionado acompanha a
+criação da conta. O backend valida a credencial e cria uma sessão antes de abrir
+a confirmação. Contas Google existentes podem entrar pelo mesmo botão no login.
+
+Para ativar:
+
+1. No Google Cloud, configure Google Auth Platform (marca, público e acesso a dados).
+2. Crie um cliente OAuth do tipo Aplicativo da Web.
+3. Cadastre as origens JavaScript `https://brasiltec.net.br` e
+   `https://www.brasiltec.net.br`; para desenvolvimento, acrescente a origem local.
+4. Configure no `.env` da produção o mesmo ID público nas duas variáveis:
+
+```dotenv
+GOOGLE_CLIENT_ID=SEU_ID.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=SEU_ID.apps.googleusercontent.com
+```
+
+Não use um segredo OAuth em variáveis `VITE_*`. Este fluxo usa popup e credencial
+de identidade, não precisa de segredo do cliente nem de rota de callback OAuth.
+Em modo de teste no Google, inclua os emails permitidos como usuários de teste.
+Gere novamente o build depois de configurar `VITE_GOOGLE_CLIENT_ID`, pois o valor
+é incluído no JavaScript. Reinicie o PM2 para aplicar também `GOOGLE_CLIENT_ID`.
+Sem configuração, cadastro por email continua disponível e o site informa a
+indisponibilidade do Google.
+
+O teste de interface Google pode ser executado com uma build que use um ID fictício:
+defina `VITE_GOOGLE_CLIENT_ID=google-ui-test.apps.googleusercontent.com` ao gerar o build
+e `GOOGLE_AUTH_TEST=1` ao executar `npm run test:cadastro`. Ele simula o SDK e falhas,
+sem enviar credenciais ao Google. Não publique essa build fictícia. O fluxo real
+exige teste manual com uma conta autorizada e o ID real.
+
 ## Navegação do painel
 
 O painel usa um menu lateral com ícones e três grupos: Visão geral, Meu negócio e Gestão e ajuda.

@@ -1,33 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type GoogleCredentialResponse = {
-  credential?: string;
-};
+type GoogleCredentialResponse = { credential?: string };
+type GoogleButtonText = "signin_with" | "signup_with" | "continue_with";
 
 type GoogleAuthButtonProps = {
   onCredential: (credential: string) => Promise<void> | void;
+  onBusyChange?: (busy: boolean) => void;
   disabled?: boolean;
   text?: string;
+  buttonText?: GoogleButtonText;
 };
 
 type GoogleAccounts = {
-  accounts: any;
-  id: {
-    initialize: (options: {
-      client_id: string;
-      callback: (response: GoogleCredentialResponse) => void;
-      ux_mode?: "popup" | "redirect";
-    }) => void;
-    renderButton: (
-      parent: HTMLElement,
-      options: {
-        theme?: "outline" | "filled_blue" | "filled_black";
-        size?: "large" | "medium" | "small";
-        text?: "signin_with" | "signup_with" | "continue_with";
-        shape?: "rectangular" | "pill" | "circle" | "square";
-        width?: number;
-      },
-    ) => void;
+  accounts: {
+    id: {
+      initialize: (options: {
+        client_id: string;
+        callback: (response: GoogleCredentialResponse) => void;
+        ux_mode: "popup";
+      }) => void;
+      renderButton: (
+        parent: HTMLElement,
+        options: {
+          theme: "outline";
+          size: "large";
+          text: GoogleButtonText;
+          shape: "rectangular";
+          width: number;
+        },
+      ) => void;
+    };
   };
 };
 
@@ -37,113 +39,188 @@ declare global {
   }
 }
 
-function ensureGoogleScript(): Promise<void> {
-  const scriptId = "google-identity-services";
-  const existing = document.getElementById(scriptId) as HTMLScriptElement | null;
-  if (existing) {
-    if (existing.dataset["loaded"] === "true") return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Falha ao carregar Google Identity.")), { once: true });
-    });
-  }
+let scriptPromise: Promise<void> | null = null;
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.id = scriptId;
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      script.dataset["loaded"] = "true";
-      resolve();
-    };
-    script.onerror = () => reject(new Error("Falha ao carregar Google Identity."));
-    document.head.appendChild(script);
+function ensureGoogleScript(): Promise<void> {
+  if (window.google?.accounts.id) return Promise.resolve();
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise<void>((resolve, reject) => {
+    const existing = document.getElementById("google-identity-services");
+    const script =
+      existing instanceof HTMLScriptElement
+        ? existing
+        : document.createElement("script");
+    const timeout = window.setTimeout(
+      () =>
+        finish(
+          new Error(
+            "O Google demorou para responder. Atualize a página e tente novamente.",
+          ),
+        ),
+      15000,
+    );
+    function finish(error?: Error) {
+      window.clearTimeout(timeout);
+      script.removeEventListener("load", onLoad);
+      script.removeEventListener("error", onError);
+      if (error) {
+        script.remove();
+        reject(error);
+      } else {
+        resolve();
+      }
+    }
+    function onLoad() {
+      finish(
+        window.google?.accounts.id
+          ? undefined
+          : new Error("Não foi possível iniciar o acesso com Google."),
+      );
+    }
+    function onError() {
+      finish(
+        new Error(
+          "Não foi possível carregar o Google. Atualize a página e tente novamente.",
+        ),
+      );
+    }
+    script.addEventListener("load", onLoad, { once: true });
+    script.addEventListener("error", onError, { once: true });
+    if (!existing) {
+      script.id = "google-identity-services";
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }).catch((error: unknown) => {
+    scriptPromise = null;
+    throw error;
   });
+  return scriptPromise;
 }
 
-export function GoogleAuthButton({ onCredential, disabled = false, text = "Continuar com Google" }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({
+  onCredential,
+  onBusyChange,
+  disabled = false,
+  text = "Conectando com Google...",
+  buttonText = "continue_with",
+}: GoogleAuthButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const clientId = useMemo(() => {
-    const env = import.meta.env as ImportMetaEnv & { VITE_GOOGLE_CLIENT_ID?: string };
-    return (env.VITE_GOOGLE_CLIENT_ID ?? "").trim();
-  }, []);
+  const [ready, setReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const callbackRef = useRef(onCredential);
+  const busyCallbackRef = useRef(onBusyChange);
+  const disabledRef = useRef(disabled);
+  const processingRef = useRef(false);
+  callbackRef.current = onCredential;
+  busyCallbackRef.current = onBusyChange;
+  disabledRef.current = disabled;
+  const clientId = (import.meta.env["VITE_GOOGLE_CLIENT_ID"] ?? "").trim();
 
   useEffect(() => {
-    let cancelled = false;
-
+    let active = true;
+    setReady(false);
+    setError(null);
     async function mountButton() {
       if (!clientId || !containerRef.current) return;
-
       try {
         await ensureGoogleScript();
-        if (cancelled || !window.google || !containerRef.current) return;
-
+        if (!active || !containerRef.current || !window.google) return;
         window.google.accounts.id.initialize({
           client_id: clientId,
           ux_mode: "popup",
-          callback: async (response: { credential: string; }) => {
+          callback: async (response) => {
+            if (!active || disabledRef.current || processingRef.current) return;
             const credential = response.credential?.trim();
             if (!credential) {
-              setError("Falha ao receber credencial do Google.");
+              setError(
+                "Não foi possível receber a credencial do Google. Tente novamente.",
+              );
               return;
             }
-
+            processingRef.current = true;
+            setBusy(true);
+            setError(null);
+            busyCallbackRef.current?.(true);
             try {
-              setBusy(true);
-              setError(null);
-              await onCredential(credential);
+              await callbackRef.current(credential);
             } catch (err) {
-              setError(err instanceof Error ? err.message : "Falha no login com Google.");
+              if (active)
+                setError(
+                  err instanceof Error
+                    ? err.message
+                    : "Não foi possível continuar com Google.",
+                );
             } finally {
-              setBusy(false);
+              processingRef.current = false;
+              if (active) {
+                setBusy(false);
+                busyCallbackRef.current?.(false);
+              }
             }
           },
         });
-
-        containerRef.current.innerHTML = "";
-        window.google.accounts.id.renderButton(containerRef.current, {
+        const container = containerRef.current;
+        container.replaceChildren();
+        window.google.accounts.id.renderButton(container, {
           theme: "outline",
           size: "large",
-          text: "continue_with",
+          text: buttonText,
           shape: "rectangular",
-          width: 320,
+          width: Math.min(320, container.clientWidth || 320),
         });
+        setReady(true);
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Falha ao iniciar Google Login.");
-        }
+        if (active)
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Não foi possível iniciar o acesso com Google.",
+          );
       }
     }
-
     void mountButton();
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, [clientId, onCredential]);
+  }, [clientId, buttonText]);
 
   if (!clientId) {
     return (
-      <p className="mt-3 text-xs text-muted-foreground">
-        Google Login indisponivel: defina VITE_GOOGLE_CLIENT_ID no ambiente.
+      <p role="status" className="mt-3 text-xs text-muted-foreground">
+        O acesso com Google ainda não está disponível. Continue com email e
+        senha.
       </p>
     );
   }
 
   return (
-    <div className="mt-4">
-      <div className={disabled || busy ? "pointer-events-none opacity-70" : ""}>
-        <div ref={containerRef} />
+    <div className="mt-4" aria-busy={busy}>
+      <div
+        inert={disabled || busy}
+        className={disabled || busy ? "opacity-70" : ""}
+      >
+        <div
+          ref={containerRef}
+          className="flex min-h-11 w-full justify-center"
+        />
       </div>
-      {(disabled || busy) ? (
-        <p className="mt-2 text-xs text-muted-foreground">{text}</p>
+      {!ready && !error ? (
+        <p role="status" className="mt-2 text-xs text-muted-foreground">
+          Carregando Google...
+        </p>
+      ) : null}
+      {busy ? (
+        <p role="status" className="mt-2 text-xs text-muted-foreground">
+          {text}
+        </p>
       ) : null}
       {error ? (
-        <p className="mt-2 text-xs text-destructive">{error}</p>
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {error}
+        </p>
       ) : null}
     </div>
   );

@@ -6,6 +6,106 @@ import {
   registerAndReachConfirmation,
 } from "./helpers/auth";
 
+test("missing Google configuration explains the fallback on registration and login", async ({ page }) => {
+  test.skip(process.env["GOOGLE_AUTH_TEST"] === "1", "Uses the normal build without a Google client ID.");
+  await page.goto("/cadastro");
+  const unavailable = page.getByRole("status").filter({ hasText: "O acesso com Google ainda não está disponível" });
+  test.skip(!(await unavailable.isVisible()), "The build already has a Google client ID configured.");
+  for (const path of ["/cadastro", "/login"]) {
+    await page.goto(path);
+    await expect(page.getByRole("status")).toContainText("O acesso com Google ainda não está disponível");
+    await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  }
+});
+
+test("Google registration handles credential and server failures without requiring password fields", async ({
+  page,
+}) => {
+  test.skip(
+    process.env["GOOGLE_AUTH_TEST"] !== "1",
+    "Requires a build with a Google test client ID.",
+  );
+  await page.route("https://accounts.google.com/gsi/client", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: `
+      let callback;
+      window.google = { accounts: { id: {
+        initialize(options) { callback = options.callback; },
+        renderButton(parent, options) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = options.text === "signup_with" ? "Cadastrar com Google" : "Continuar com Google";
+          button.onclick = () => callback({ credential: "" });
+          parent.appendChild(button);
+          const valid = document.createElement("button");
+          valid.type = "button";
+          valid.textContent = "Enviar credencial de teste";
+          valid.onclick = () => callback({ credential: "fake-credential-for-local-ui-test-only" });
+          parent.appendChild(valid);
+        }
+      } } };
+    `,
+    }),
+  );
+  for (const path of ["/cadastro", "/login"]) {
+    await page.goto(path);
+    const googleButton = page.getByRole("button", {
+      name:
+        path === "/cadastro" ? "Cadastrar com Google" : "Continuar com Google",
+      exact: true,
+    });
+    await googleButton.click();
+    await expect(page.getByRole("alert")).toContainText("receber a credencial");
+    if (path === "/cadastro")
+      await page.locator("#tipo").selectOption("Afiliado");
+    const requests: string[] = [];
+    await page.route("**/*", async (route) => {
+      if (route.request().method() === "POST") {
+        requests.push(route.request().postData() ?? "");
+        await route.fulfill({
+          status: 500,
+          contentType: "text/plain",
+          body: "Google auth test unavailable",
+        });
+      } else {
+        await route.continue();
+      }
+    });
+    await page
+      .getByRole("button", { name: "Enviar credencial de teste" })
+      .click();
+    await expect(page.getByRole("alert")).not.toContainText(
+      "receber a credencial",
+    );
+    await expect(page.getByRole("alert")).toBeVisible();
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toContain("fake-credential-for-local-ui-test-only");
+    if (path === "/cadastro") expect(requests[0]).toContain("Afiliado");
+    await expect(page.locator("#senha")).toHaveValue("");
+    await expect(page.locator('button[type="submit"]')).toBeEnabled();
+    await expect(page).toHaveURL(new RegExp(`${path}$`));
+    await page.unroute("**/*");
+  }
+});
+
+test("Google script load failure is visible and email registration remains available", async ({
+  page,
+}) => {
+  test.skip(
+    process.env["GOOGLE_AUTH_TEST"] !== "1",
+    "Requires a build with a Google test client ID.",
+  );
+  await page.route("https://accounts.google.com/gsi/client", (route) =>
+    route.abort(),
+  );
+  await page.goto("/cadastro");
+  await expect(page.getByRole("alert")).toContainText("carregar o Google");
+  await expect(
+    page.getByRole("button", { name: "Cadastrar", exact: true }),
+  ).toBeEnabled();
+});
+
 test("production registration creates an account, activates a session and permits a fresh login", async ({
   page,
   browser,

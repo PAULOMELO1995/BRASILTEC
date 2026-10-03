@@ -21,6 +21,7 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,7 +35,7 @@ function Login() {
       return;
     }
 
-    if (submitting) return;
+    if (submitting || googleSubmitting) return;
     setError(null);
     setSubmitting(true);
 
@@ -82,7 +83,7 @@ function Login() {
             </p>
           ) : null}
 
-          <button type="submit" disabled={submitting} className="btn-base btn-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-70">
+          <button type="submit" disabled={submitting || googleSubmitting} className="btn-base btn-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-70">
             {submitting ? "Entrando..." : "Entrar"}
           </button>
 
@@ -94,17 +95,16 @@ function Login() {
           <GoogleAuthButton
             text="Conectando com Google..."
             disabled={submitting}
+            onBusyChange={setGoogleSubmitting}
             onCredential={async (credential) => {
               setError(null);
-              const response = await authenticateWithGoogle({
+              await authenticateWithGoogle({
                 data: {
                   credential,
                 },
               });
 
-              if ((response as { user?: { id?: string } }).user?.id) {
-                window.location.assign("/painel");
-              }
+              window.location.assign("/painel");
             }}
           />
 

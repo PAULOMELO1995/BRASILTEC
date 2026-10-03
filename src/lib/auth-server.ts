@@ -653,7 +653,7 @@ export const authenticateWithGoogle = createServerFn({ method: "POST" })
     const user = await authenticateOrCreateGoogleUser({
       email: identity.email,
       name: identity.name,
-      businessType: data.businessType as BusinessType | undefined,
+      ...(data.businessType ? { businessType: data.businessType } : {}),
     });
 
     const session = await createSession(user.id);
