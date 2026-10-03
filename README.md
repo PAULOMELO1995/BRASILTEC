@@ -201,7 +201,7 @@ Existe um exemplo pronto em [\.env.example](.env.example).
 
 O formulário da rota `/suporte` agora envia chamado de contato para o email do destinatário configurado.
 
-O contato público e o destinatário padrão são `brasiltec@gmail.com`. O link de
+O contato público e o destinatário padrão são `brasiltec_net@outlook.com`. O link de
 email abre o aplicativo de email do visitante; isso não configura envio
 automático pelo servidor. Variáveis de ambiente já definidas prevalecem sobre
 o destinatário padrão abaixo.
@@ -210,10 +210,10 @@ Configuração mínima:
 
 ```powershell
 # Destinatário padrão
-$env:SUPPORT_DEFAULT_RECIPIENT="brasiltec@gmail.com"
+$env:SUPPORT_DEFAULT_RECIPIENT="brasiltec_net@outlook.com"
 
 # Lista de emails permitidos como destinatário (protege contra open relay)
-$env:SUPPORT_ALLOWED_RECIPIENTS="brasiltec@gmail.com"
+$env:SUPPORT_ALLOWED_RECIPIENTS="brasiltec_net@outlook.com"
 
 # Modo de envio
 $env:SUPPORT_EMAIL_PROVIDER="log"

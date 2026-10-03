@@ -6,10 +6,10 @@ import {
   registerAndReachConfirmation,
 } from "./helpers/auth";
 
-test("support shows the Brasiltec Gmail contact and opens a direct email link", async ({ page }) => {
+test("support shows the Brasiltec Outlook contact and opens a direct email link", async ({ page }) => {
   await page.goto("/suporte");
-  await expect(page.getByRole("link", { name: "brasiltec@gmail.com", exact: true })).toHaveAttribute("href", "mailto:brasiltec@gmail.com");
-  await expect(page.getByLabel("Email do destinatário (opcional)")).toHaveAttribute("placeholder", "brasiltec@gmail.com");
+  await expect(page.getByRole("link", { name: "brasiltec_net@outlook.com", exact: true })).toHaveAttribute("href", "mailto:brasiltec_net@outlook.com");
+  await expect(page.getByLabel("Email do destinatário (opcional)")).toHaveAttribute("placeholder", "brasiltec_net@outlook.com");
   await expect(page.getByText("suporte@brasiltec.com", { exact: true })).toHaveCount(0);
 });
 
