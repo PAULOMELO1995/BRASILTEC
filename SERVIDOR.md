@@ -159,7 +159,7 @@ Exemplo:
 DATABASE_URL=postgresql://brasiltec_user:sua_senha_segura@localhost:5432/brasiltec
 APP_BASE_URL=http://localhost
 NODE_ENV=production
-PORT=3000
+PORT=3001
 ```
 
 Se o projeto tiver mais variáveis, adicione também.
@@ -211,7 +211,7 @@ server {
     server_name localhost;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -244,7 +244,7 @@ http://IP_DO_COMPUTADOR
 Abra no navegador:
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:3001
 ```
 
 Ou no outro computador da mesma rede:

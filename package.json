@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "start": "node dist/server/server.js",
+    "start": "node .output/server/index.mjs",
     "smoke:sprintA": "npm run build && playwright test -c playwright.smoke.config.ts",
     "smoke:sprintA:ui": "playwright test -c playwright.smoke.config.ts --ui",
     "backup:sqlite": "node scripts/backup-sqlite.mjs",

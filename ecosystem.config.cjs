@@ -4,7 +4,7 @@ module.exports = {
   apps: [
     {
       name: "brasiltec",
-      script: "./dist/server/server.js",
+      script: "./.output/server/index.mjs",
       instances: 1,
       autorestart: true,
       watch: false,
@@ -12,7 +12,7 @@ module.exports = {
       env_file: ".env",
       env_production: {
         NODE_ENV: "production",
-        PORT: 3000,
+        PORT: 3001,
       },
     },
   ],

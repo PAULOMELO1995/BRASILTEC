@@ -35,7 +35,7 @@ jobs:
       - name: Compactar artefatos de deploy
         run: |
           tar -czf deploy.tar.gz \
-            dist/ \
+            .output/ \
             package.json \
             package-lock.json \
             ecosystem.config.cjs
