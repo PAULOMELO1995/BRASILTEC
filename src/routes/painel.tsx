@@ -70,14 +70,14 @@ function Painel() {
             O login agora lê a sessão, mostra os dados do banco e mantém a navegação fora da URL.
           </p>
 
-          <div className="mt-8 grid gap-4 rounded-3xl border border-border/60 bg-background/70 p-5 text-sm md:grid-cols-3">
+          <div className="mt-8 grid gap-4 rounded-3xl border border-border/60 bg-background/70 p-5 text-sm lg:grid-cols-3">
             <div>
               <p className="text-muted-foreground">Nome</p>
-              <p className="mt-1 font-medium text-foreground">{name}</p>
+              <p className="mt-1 break-words font-medium text-foreground">{name}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Email</p>
-              <p className="mt-1 font-medium text-foreground">{email}</p>
+              <p className="mt-1 break-all font-medium text-foreground">{email}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Tipo de negócio</p>
@@ -127,7 +127,7 @@ function Painel() {
           </div>
 
           <div className="mt-8 rounded-3xl border border-border/60 bg-background/70 p-5">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-muted-foreground">Últimos cadastros</p>
                 <p className="mt-1 text-lg font-medium text-foreground">Gerenciamento do banco</p>
@@ -140,15 +140,15 @@ function Painel() {
             <div className="mt-5 grid gap-3">
               {latestUsers.map((user) => (
                 <article key={user.email} className="rounded-2xl border border-border/60 bg-background/80 p-4">
-                  <p className="font-medium text-foreground">{user.name}</p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <p className="break-words font-medium text-foreground">{user.name}</p>
+                  <p className="break-all text-sm text-muted-foreground">{user.email}</p>
                   <p className="mt-2 text-xs uppercase tracking-wide text-primary">{user.businessType}</p>
                 </article>
               ))}
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link to="/produtos/novo" className="btn-base btn-primary">
               Criar produto
             </Link>

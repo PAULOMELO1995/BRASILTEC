@@ -14,7 +14,10 @@ A cada push na branch `main`/`master`, o workflow faz o build e envia o app para
 1. **Node.js 22+** instalado (`nvm` ou `apt`)
 2. **PM2** (instalado automaticamente pelo workflow, se necessário)
 3. **Nginx** como proxy reverso (veja configuração abaixo)
-4. Usuário SSH com acesso ao diretório `/var/www/brasiltec`
+4. Usuário SSH com acesso ao diretório `/var/www/brasiltec-producao`
+
+O deploy atualiza somente `/var/www/brasiltec-producao`; a instalação antiga em
+`/var/www/brasiltec` permanece preservada.
 
 ### Secrets necessários no GitHub
 
@@ -75,7 +78,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### Variáveis de ambiente no VPS
 
-Crie o arquivo `/var/www/brasiltec/.env` com as variáveis de produção (baseado em `.env.example`).
+Crie o arquivo `/var/www/brasiltec-producao/.env` com as variáveis de produção (baseado em `.env.example`).
 O Node.js carrega esse arquivo usando `--env-file-if-exists=.env`, tanto em `npm start` quanto pelo PM2.
 Use Node.js 22.12 ou superior.
 
@@ -98,6 +101,20 @@ Se o navegador requisitar `/@id/virtual:tanstack-start-dev-client-entry`, a pág
 usando a build de produção: esse script depende do Vite e sua falha impede o envio do cadastro.
 Após publicar os artefatos e configurar o banco no `.env`, reinicie com
 `pm2 startOrRestart ecosystem.config.cjs --env production --update-env` e valide o domínio.
+Caso o Nginx tenha um bloco `location /assets/` com `alias`, ele deve apontar para
+`/var/www/brasiltec-producao/.output/public/assets/`, não para a build antiga.
+
+## Navegação do painel
+
+O painel usa um menu lateral com ícones e três grupos: Visão geral, Meu negócio e Gestão e ajuda.
+A página atual fica destacada, incluindo subrotas como a criação de produtos.
+A barra superior concentra o nome da página, notificações e a ação Criar produto.
+Em telas menores que 768px, o botão de menu abre a mesma navegação em um painel lateral
+com fechamento por Escape, devolução do foco ao botão e fechamento após selecionar uma rota.
+A ação Sair fica no menu e informa falhas sem redirecionar como se a sessão tivesse sido encerrada.
+
+Valide cadastro e navegação com `npm run build` seguido de `npm run test:cadastro`.
+Os testes cobrem desktop, tablet, celular, rota ativa, saída da conta e preservação do fluxo de login.
 
 ## Requisitos
 
