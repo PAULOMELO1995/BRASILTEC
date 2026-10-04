@@ -24,7 +24,16 @@ test("admin role controls remain available without introductory copy", async ({ 
 test("support shows the Brasiltec Outlook contact and opens a direct email link", async ({ page }) => {
   await page.goto("/suporte");
   await expect(page.getByRole("link", { name: "brasiltec_net@outlook.com", exact: true })).toHaveAttribute("href", "mailto:brasiltec_net@outlook.com");
-  await expect(page.getByLabel("Email do destinatário (opcional)")).toHaveAttribute("placeholder", "brasiltec_net@outlook.com");
+  await expect(page.locator('[name="destinatario"]')).toHaveCount(0);
+  const email = page.getByRole("textbox", { name: "Email", exact: true });
+  await expect(email).toHaveAttribute("id", "email");
+  await expect(email).toHaveAttribute("name", "email");
+  await expect(email).toHaveAttribute("type", "email");
+  for (const field of ["Nome", "Email", "Assunto", "Mensagem"]) {
+    await expect(page.getByRole("textbox", { name: field, exact: true })).toHaveAttribute("required", "");
+  }
+  await email.fill("email-invalido");
+  expect(await email.evaluate((element: HTMLInputElement) => element.validity.typeMismatch)).toBe(true);
   await expect(page.getByText("suporte@brasiltec.com", { exact: true })).toHaveCount(0);
 });
 

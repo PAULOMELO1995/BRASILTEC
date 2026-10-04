@@ -201,7 +201,11 @@ Existe um exemplo pronto em [\.env.example](.env.example).
 
 O formulário da rota `/suporte` agora envia chamado de contato para o email do destinatário configurado.
 
-O contato público e o destinatário padrão são `brasiltec_net@outlook.com`. O link de
+O contato público e o destinatário padrão são `brasiltec_net@outlook.com`.
+O formulário solicita nome, email do remetente, assunto e mensagem, todos
+obrigatórios, e envia o chamado para `brasiltec_net@outlook.com` sem campo de
+destinatário editável.
+O link de
 email abre o aplicativo de email do visitante; isso não configura envio
 automático pelo servidor. Variáveis de ambiente já definidas prevalecem sobre
 o destinatário padrão abaixo.

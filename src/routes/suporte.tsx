@@ -60,7 +60,6 @@ function Suporte() {
     const formData = new FormData(form);
     const name = String(formData.get("nome") ?? "").trim();
     const senderEmail = String(formData.get("email") ?? "").trim();
-    const recipientEmail = String(formData.get("destinatario") ?? "").trim();
     const subject = String(formData.get("assunto") ?? "").trim();
     const message = String(formData.get("mensagem") ?? "").trim();
 
@@ -78,7 +77,7 @@ function Suporte() {
         data: {
           name,
           senderEmail,
-          recipientEmail: recipientEmail || undefined,
+          recipientEmail: SUPPORT_EMAIL,
           subject,
           message,
         },
@@ -109,39 +108,26 @@ function Suporte() {
         <form className="panel-elevated p-7 md:p-9" onSubmit={handleSubmit}>
           <h2 className="text-xl">Abrir chamado de suporte</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Preencha os dados para que o site entre em contato com o email do destinatário autorizado.
+            Preencha os dados e descreva seu chamado para a equipe de suporte.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
               <label className="field-label" htmlFor="nome">
                 Nome
               </label>
-              <input id="nome" name="nome" className="field-input" placeholder="Seu nome completo" />
+              <input id="nome" name="nome" required className="field-input" placeholder="Seu nome completo" />
             </div>
             <div>
               <label className="field-label" htmlFor="email">
                 Email
               </label>
-              <input id="email" name="email" type="email" className="field-input" placeholder="voce@email.com" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="field-label" htmlFor="destinatario">
-                Email do destinatário (opcional)
-              </label>
-              <input
-                id="destinatario"
-                name="destinatario"
-                type="email"
-                className="field-input"
-                placeholder={SUPPORT_EMAIL}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">Se não informar, usamos o destinatário padrão configurado.</p>
+              <input id="email" name="email" type="email" required className="field-input" placeholder="Seu email para receber a resposta" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label" htmlFor="assunto">
                 Assunto
               </label>
-              <input id="assunto" name="assunto" className="field-input" placeholder="Resumo do chamado" />
+              <input id="assunto" name="assunto" required className="field-input" placeholder="Resumo do chamado" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label" htmlFor="mensagem">
@@ -150,6 +136,7 @@ function Suporte() {
               <textarea
                 id="mensagem"
                 name="mensagem"
+                required
                 rows={5}
                 className="field-input resize-y"
                 placeholder="Descreva o que aconteceu"
