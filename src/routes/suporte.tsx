@@ -40,11 +40,9 @@ const quickFaq = [
 
 function Suporte() {
   const [error, setError] = useState<string | null>(null);
-  const [emailDraft, setEmailDraft] = useState<string | null>(null);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setEmailDraft(null);
 
     const form = event.currentTarget;
 
@@ -62,7 +60,6 @@ function Suporte() {
     setError(null);
     const body = `Nome: ${name}\r\nEmail para resposta: ${senderEmail}\r\n\r\n${message}`;
     const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setEmailDraft(mailto);
     window.location.assign(mailto);
   }
 
@@ -115,14 +112,6 @@ function Suporte() {
             </div>
           </div>
           {error ? <p className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
-
-          {emailDraft ? (
-            <div className="mt-4 rounded-2xl border border-border px-4 py-3 text-sm" role="status">
-              <p>Mensagem preparada. Conclua o envio no seu aplicativo de email. Nenhum chamado foi registrado pelo site.</p>
-              <a href={emailDraft} className="mt-2 inline-block underline">Abrir mensagem novamente</a>
-              <p className="mt-2">Se nada abrir, configure um aplicativo de email ou copie os dados para uma nova mensagem no Outlook ou Gmail.</p>
-            </div>
-          ) : null}
 
           <button type="submit" className="btn-base btn-primary mt-6">
             {SUPPORT_EMAIL}
