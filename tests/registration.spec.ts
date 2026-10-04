@@ -34,6 +34,18 @@ test("support shows the Brasiltec Outlook contact and opens a direct email link"
   }
   await email.fill("email-invalido");
   expect(await email.evaluate((element: HTMLInputElement) => element.validity.typeMismatch)).toBe(true);
+  await page.getByRole("textbox", { name: "Nome", exact: true }).fill("João & Silva");
+  await email.fill("cliente@exemplo.com");
+  await page.getByRole("textbox", { name: "Assunto", exact: true }).fill("Dúvida & pagamento?");
+  await page.getByRole("textbox", { name: "Mensagem", exact: true }).fill("Olá!\nPedido #123 & detalhes.");
+  await page.getByRole("button", { name: "Abrir aplicativo de email", exact: true }).click();
+  const draft = page.getByRole("link", { name: "Abrir mensagem novamente", exact: true });
+  const href = await draft.getAttribute("href");
+  expect(href).toBe(
+    `mailto:brasiltec_net@outlook.com?subject=${encodeURIComponent("Dúvida & pagamento?")}&body=${encodeURIComponent("Nome: João & Silva\r\nEmail para resposta: cliente@exemplo.com\r\n\r\nOlá!\nPedido #123 & detalhes.")}`,
+  );
+  await expect(page.getByRole("status").filter({ hasText: "Mensagem preparada." })).toContainText("Nenhum chamado foi registrado pelo site.");
+  await expect(email).toHaveValue("cliente@exemplo.com");
   await expect(page.getByText("suporte@brasiltec.com", { exact: true })).toHaveCount(0);
 });
 

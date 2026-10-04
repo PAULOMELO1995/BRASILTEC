@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageShell, PageHeader } from "@/components/site/PageShell";
-import { sendSupportContactEmail } from "@/lib/auth-server";
 import { SUPPORT_EMAIL } from "@/lib/site-contact";
 
 export const Route = createFileRoute("/suporte")({
@@ -39,21 +38,13 @@ const quickFaq = [
   ["Como publicar um produto?", 'Use o fluxo em Produtos: Etapa 1 a Etapa 4 e finalize em "Publicar".'],
 ];
 
-type SupportContactResponse = {
-  ok: true;
-  recipientEmail: string;
-  provider: "resend" | "log";
-  delivered: boolean;
-};
-
 function Suporte() {
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting) return;
+    setEmailDraft(null);
 
     const form = event.currentTarget;
 
@@ -68,32 +59,11 @@ function Suporte() {
       return;
     }
 
-    setSubmitting(true);
     setError(null);
-    setSuccess(null);
-
-    try {
-      const response = (await sendSupportContactEmail({
-        data: {
-          name,
-          senderEmail,
-          recipientEmail: SUPPORT_EMAIL,
-          subject,
-          message,
-        },
-      })) as SupportContactResponse;
-
-      const modeLabel = response.delivered
-        ? `Email enviado para ${response.recipientEmail}.`
-        : `Chamado registrado para ${response.recipientEmail} (modo log: configure provider para envio externo).`;
-      setSuccess(modeLabel);
-      form.reset();
-    } catch (err: unknown) {
-      setSuccess(null);
-      setError(err instanceof Error ? err.message : "Não foi possível enviar o chamado no momento.");
-    } finally {
-      setSubmitting(false);
-    }
+    const body = `Nome: ${name}\r\nEmail para resposta: ${senderEmail}\r\n\r\n${message}`;
+    const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setEmailDraft(mailto);
+    window.location.assign(mailto);
   }
 
   return (
@@ -108,7 +78,8 @@ function Suporte() {
         <form className="panel-elevated p-7 md:p-9" onSubmit={handleSubmit}>
           <h2 className="text-xl">Abrir chamado de suporte</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Preencha os dados e descreva seu chamado para a equipe de suporte.
+            Preencha os dados para abrir uma mensagem para {SUPPORT_EMAIL} no seu aplicativo de email.
+            Você precisará confirmar o envio nesse aplicativo. O site não registra nem envia o chamado.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
@@ -145,10 +116,16 @@ function Suporte() {
           </div>
           {error ? <p className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
 
-          {success ? <p className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800">{success}</p> : null}
+          {emailDraft ? (
+            <div className="mt-4 rounded-2xl border border-border px-4 py-3 text-sm" role="status">
+              <p>Mensagem preparada. Conclua o envio no seu aplicativo de email. Nenhum chamado foi registrado pelo site.</p>
+              <a href={emailDraft} className="mt-2 inline-block underline">Abrir mensagem novamente</a>
+              <p className="mt-2">Se nada abrir, configure um aplicativo de email ou copie os dados para uma nova mensagem no Outlook ou Gmail.</p>
+            </div>
+          ) : null}
 
-          <button type="submit" disabled={submitting} className="btn-base btn-primary mt-6 disabled:cursor-not-allowed disabled:opacity-70">
-            {submitting ? "Enviando..." : "Enviar chamado"}
+          <button type="submit" className="btn-base btn-primary mt-6">
+            Abrir aplicativo de email
           </button>
         </form>
 

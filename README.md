@@ -199,18 +199,21 @@ Existe um exemplo pronto em [\.env.example](.env.example).
 
 ### Contato por email (destinatário)
 
-O formulário da rota `/suporte` agora envia chamado de contato para o email do destinatário configurado.
+O formulário da rota `/suporte` prepara um link `mailto:` e abre o aplicativo de
+email do visitante. Não chama o servidor, não registra chamados e não confirma
+entrega. O visitante deve concluir o envio no aplicativo de email.
 
 O contato público e o destinatário padrão são `brasiltec_net@outlook.com`.
 O formulário solicita nome, email do remetente, assunto e mensagem, todos
-obrigatórios, e envia o chamado para `brasiltec_net@outlook.com` sem campo de
+obrigatórios, e prepara a mensagem para `brasiltec_net@outlook.com` sem campo de
 destinatário editável.
 O link de
 email abre o aplicativo de email do visitante; isso não configura envio
 automático pelo servidor. Variáveis de ambiente já definidas prevalecem sobre
 o destinatário padrão abaixo.
 
-Configuração mínima:
+As configurações abaixo são usadas apenas pela função de envio do servidor,
+não pelo formulário atual com `mailto:`:
 
 ```powershell
 # Destinatário padrão
