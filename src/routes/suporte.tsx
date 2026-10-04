@@ -78,8 +78,8 @@ function Suporte() {
         <form className="panel-elevated p-7 md:p-9" onSubmit={handleSubmit}>
           <h2 className="text-xl">Abrir chamado de suporte</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Preencha os dados para abrir uma mensagem para {SUPPORT_EMAIL} no seu aplicativo de email.
-            Você precisará confirmar o envio nesse aplicativo. O site não registra nem envia o chamado.
+            Coloque seus dados, escreva sua mensagem e clique no botão {SUPPORT_EMAIL}.
+            Depois, confirme o envio no seu aplicativo de email.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
@@ -125,7 +125,7 @@ function Suporte() {
           ) : null}
 
           <button type="submit" className="btn-base btn-primary mt-6">
-            Abrir aplicativo de email
+            {SUPPORT_EMAIL}
           </button>
         </form>
 

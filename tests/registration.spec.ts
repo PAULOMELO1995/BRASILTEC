@@ -38,7 +38,7 @@ test("support shows the Brasiltec Outlook contact and opens a direct email link"
   await email.fill("cliente@exemplo.com");
   await page.getByRole("textbox", { name: "Assunto", exact: true }).fill("Dúvida & pagamento?");
   await page.getByRole("textbox", { name: "Mensagem", exact: true }).fill("Olá!\nPedido #123 & detalhes.");
-  await page.getByRole("button", { name: "Abrir aplicativo de email", exact: true }).click();
+  await page.getByRole("button", { name: "brasiltec_net@outlook.com", exact: true }).click();
   const draft = page.getByRole("link", { name: "Abrir mensagem novamente", exact: true });
   const href = await draft.getAttribute("href");
   expect(href).toBe(
