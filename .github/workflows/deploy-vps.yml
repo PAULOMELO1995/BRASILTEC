@@ -51,7 +51,8 @@ jobs:
             .output/ \
             package.json \
             package-lock.json \
-            ecosystem.config.cjs
+            ecosystem.config.cjs \
+            scripts/list-users.mjs
 
       - name: Copiar artefatos para o VPS
         uses: appleboy/scp-action@v0.1.7

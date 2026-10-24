@@ -197,6 +197,17 @@ Exemplo:
 $env:DATABASE_URL="postgresql://user:password@host:5432/database?sslmode=require"
 ```
 
+Para listar os usuários do banco ativo, execute na raiz do projeto:
+
+```powershell
+npm run db:users
+```
+
+O comando lê `DATABASE_URL` e `SQLITE_PATH` do `.env` atual e funciona com
+PostgreSQL ou SQLite, sem depender de um caminho de banco fixo. Ele mostra apenas
+nome, email e data de criação; senhas e hashes nunca são exibidos. Em produção,
+execute `npm run db:users` dentro de `/var/www/brasiltec-producao`.
+
 ## Arquivo de ambiente
 
 Existe um exemplo pronto em [\.env.example](.env.example).

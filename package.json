@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "start": "node --env-file-if-exists=.env .output/server/index.mjs",
+    "db:users": "node --env-file-if-exists=.env scripts/list-users.mjs",
     "test:cadastro": "node scripts/test-registration.mjs",
     "smoke:sprintA": "npm run build && playwright test -c playwright.smoke.config.ts",
     "smoke:sprintA:ui": "playwright test -c playwright.smoke.config.ts --ui",
