@@ -6,12 +6,12 @@ export function SiteFooter() {
       <div className="container-page grid gap-8 md:grid-cols-[1fr_auto] md:items-start">
         <div className="max-w-md">
           <div className="flex items-center gap-2.5">
-            <span
-              className="grid size-9 place-items-center rounded-xl font-display text-base font-bold text-primary-foreground"
-              style={{ backgroundImage: "var(--gradient-primary)" }}
-            >
-              B
-            </span>
+            <img
+              src="/logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="size-9 shrink-0"
+            />
             <span className="font-display text-lg font-semibold tracking-tight">
               Brasiltec
             </span>
@@ -40,17 +40,32 @@ export function SiteFooter() {
             Brasiltec &copy; 2026. Todos os direitos reservados.
           </p>
         </div>
-        <nav aria-label="Links do rodapé" className="flex flex-wrap gap-x-6 gap-y-2 text-sm md:pt-2">
-          <Link to="/planos" className="text-muted-foreground transition-colors hover:text-primary">
+        <nav
+          aria-label="Links do rodapé"
+          className="flex flex-wrap gap-x-6 gap-y-2 text-sm md:pt-2"
+        >
+          <Link
+            to="/planos"
+            className="text-muted-foreground transition-colors hover:text-primary"
+          >
             Planos
           </Link>
-          <Link to="/marketplace" className="text-muted-foreground transition-colors hover:text-primary">
+          <Link
+            to="/marketplace"
+            className="text-muted-foreground transition-colors hover:text-primary"
+          >
             Marketplace
           </Link>
-          <Link to="/suporte" className="text-muted-foreground transition-colors hover:text-primary">
+          <Link
+            to="/suporte"
+            className="text-muted-foreground transition-colors hover:text-primary"
+          >
             Suporte
           </Link>
-          <Link to="/como-funciona" className="text-muted-foreground transition-colors hover:text-primary">
+          <Link
+            to="/como-funciona"
+            className="text-muted-foreground transition-colors hover:text-primary"
+          >
             Como funciona
           </Link>
         </nav>

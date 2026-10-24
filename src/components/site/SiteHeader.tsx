@@ -76,12 +76,12 @@ export function SiteHeader() {
             aria-label="Brasiltec — página inicial"
             className="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span
-              className="grid size-9 place-items-center rounded-xl font-display text-base font-bold text-primary-foreground"
-              style={{ backgroundImage: "var(--gradient-primary)" }}
-            >
-              B
-            </span>
+            <img
+              src="/logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="size-9 shrink-0"
+            />
             <span
               className={cn(
                 "font-display text-lg font-semibold tracking-tight",
