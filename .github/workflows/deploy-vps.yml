@@ -27,10 +27,17 @@ jobs:
         run: npm ci
 
       - name: Build (preset node)
-        run: npm run build
         env:
           NITRO_PRESET: node
           NODE_ENV: production
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || vars.VITE_GOOGLE_CLIENT_ID || secrets.GOOGLE_CLIENT_ID || vars.GOOGLE_CLIENT_ID }}
+        shell: bash
+        run: |
+          if [ -z "$VITE_GOOGLE_CLIENT_ID" ]; then
+            echo "::error::Configure VITE_GOOGLE_CLIENT_ID in GitHub Actions secrets or variables before deploying."
+            exit 1
+          fi
+          npm run build
 
       - name: Instalar navegador de teste
         run: npx playwright install --with-deps chromium

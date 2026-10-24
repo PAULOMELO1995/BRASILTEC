@@ -29,6 +29,7 @@ Acesse **Settings → Secrets and variables → Actions** do repositório e adic
 | `VPS_USER` | Usuário SSH (ex: `ubuntu` ou `root`) |
 | `VPS_SSH_KEY` | Chave SSH privada (conteúdo do arquivo `~/.ssh/id_rsa`) |
 | `VPS_PORT` | Porta SSH (opcional, padrão `22`) |
+| `VITE_GOOGLE_CLIENT_ID` | ID público do cliente OAuth Google, usado para incluir o botão Google no build publicado |
 
 ### Gerar chave SSH para o deploy
 
@@ -117,7 +118,7 @@ Para ativar:
 2. Crie um cliente OAuth do tipo Aplicativo da Web.
 3. Cadastre as origens JavaScript `https://brasiltec.net.br` e
    `https://www.brasiltec.net.br`; para desenvolvimento, acrescente a origem local.
-4. Configure no `.env` da produção o mesmo ID público nas duas variáveis:
+4. Configure o ID público no `.env` da produção e nas variáveis/secrets do GitHub Actions:
 
 ```dotenv
 GOOGLE_CLIENT_ID=SEU_ID.apps.googleusercontent.com
@@ -127,8 +128,11 @@ VITE_GOOGLE_CLIENT_ID=SEU_ID.apps.googleusercontent.com
 Não use um segredo OAuth em variáveis `VITE_*`. Este fluxo usa popup e credencial
 de identidade, não precisa de segredo do cliente nem de rota de callback OAuth.
 Em modo de teste no Google, inclua os emails permitidos como usuários de teste.
-Gere novamente o build depois de configurar `VITE_GOOGLE_CLIENT_ID`, pois o valor
-é incluído no JavaScript. Reinicie o PM2 para aplicar também `GOOGLE_CLIENT_ID`.
+O workflow de deploy lê `VITE_GOOGLE_CLIENT_ID` das secrets/variables do GitHub
+Actions (aceita `GOOGLE_CLIENT_ID` como alternativa) e interrompe o deploy se
+nenhum ID estiver configurado. Esse valor público é incluído no JavaScript durante
+o build. Mantenha `GOOGLE_CLIENT_ID` no `.env` do VPS para validar a credencial
+no servidor e reinicie o PM2 após alterações nessa variável.
 Sem configuração, cadastro por email continua disponível e o site informa a
 indisponibilidade do Google.
 
