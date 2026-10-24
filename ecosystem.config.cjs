@@ -13,6 +13,8 @@ module.exports = {
       env_production: {
         NODE_ENV: "production",
         PORT: 3001,
+        DATABASE_URL: "sqlite:.data/brasiltec.sqlite",
+        SQLITE_PATH: ".data/brasiltec.sqlite",
       },
     },
   ],

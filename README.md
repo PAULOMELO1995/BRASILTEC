@@ -77,11 +77,22 @@ sudo ln -s /etc/nginx/sites-available/brasiltec /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### Variáveis de ambiente no VPS
+### Banco de dados da produção no VPS
 
-Crie o arquivo `/var/www/brasiltec-producao/.env` com as variáveis de produção (baseado em `.env.example`).
-O Node.js carrega esse arquivo usando `--env-file-if-exists=.env`, tanto em `npm start` quanto pelo PM2.
-Use Node.js 22.12 ou superior.
+A produção usa somente SQLite em `/var/www/brasiltec-producao/.data/brasiltec.sqlite`.
+O PM2 define `DATABASE_URL=sqlite:.data/brasiltec.sqlite` e
+`SQLITE_PATH=.data/brasiltec.sqlite`, prevalecendo sobre qualquer configuração
+PostgreSQL antiga no `.env`. Os artefatos do deploy não incluem `.data`, então o
+arquivo do banco permanece no VPS entre publicações.
+
+Mantenha as configurações privadas (Google, email e demais serviços) no arquivo
+`/var/www/brasiltec-producao/.env`; não coloque credenciais do PostgreSQL nesse
+arquivo para a aplicação de produção. O Node.js carrega esse arquivo com
+`--env-file-if-exists=.env`. Use Node.js 22.12 ou superior.
+
+O comando `npm run db:users` lista as contas do SQLite ativo. Antes de alterar ou
+mover o banco, crie uma cópia de segurança e não apague os demais arquivos SQLite
+até confirmar que não são mais necessários.
 
 ### Validar cadastro e publicar a build correta
 
@@ -206,7 +217,11 @@ npm run db:users
 O comando lê `DATABASE_URL` e `SQLITE_PATH` do `.env` atual e funciona com
 PostgreSQL ou SQLite, sem depender de um caminho de banco fixo. Ele mostra apenas
 nome, email e data de criação; senhas e hashes nunca são exibidos. Em produção,
-execute `npm run db:users` dentro de `/var/www/brasiltec-producao`.
+execute no VPS dentro de `/var/www/brasiltec-producao`:
+
+```bash
+DATABASE_URL=sqlite:.data/brasiltec.sqlite SQLITE_PATH=.data/brasiltec.sqlite npm run db:users
+```
 
 ## Arquivo de ambiente
 
