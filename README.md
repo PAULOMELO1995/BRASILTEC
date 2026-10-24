@@ -105,7 +105,8 @@ npm start
 O build usa o preset Node por padrão. Para outro destino, defina `NITRO_PRESET` explicitamente.
 O teste inicia a build de produção em uma porta separada e usa um arquivo SQLite temporário, sem alterar o banco real.
 Ele verifica a gravação do usuário e da senha protegida no banco, sessão, acesso ao painel,
-novo login e rejeição de email duplicado. O arquivo temporário é removido ao terminar.
+novo login, rejeição de email duplicado e o fluxo de senha temporária. O arquivo temporário
+é removido ao terminar.
 
 Em produção, o Nginx deve encaminhar para o processo `npm start`/PM2 na porta 3001,
 nunca para `npm run dev` ou para arquivos HTML copiados de uma sessão de desenvolvimento.
@@ -122,6 +123,14 @@ Cadastro e login usam Google Identity Services. No cadastro, o Google fornece no
 email verificado sem exigir senha local; o tipo de negócio selecionado acompanha a
 criação da conta. O backend valida a credencial e cria uma sessão antes de abrir
 a confirmação. Contas Google existentes podem entrar pelo mesmo botão no login.
+
+### Redefinir senha como administrador
+
+Um administrador pode gerar uma senha temporária na seção de gestão de usuários do painel
+admin. A senha aparece uma única vez; compartilhe-a por um canal seguro. A ação invalida
+as sessões anteriores, e o usuário precisa definir uma senha pessoal no próximo acesso
+antes de usar as demais áreas autenticadas. Senhas e hashes existentes não podem ser
+recuperados nem são exibidos pelo painel.
 
 Para ativar:
 

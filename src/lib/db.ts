@@ -100,9 +100,14 @@ export async function ensureDatabaseSchema(): Promise<void> {
           email TEXT NOT NULL UNIQUE,
           business_type TEXT NOT NULL,
           password_hash TEXT NOT NULL,
+          must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
           created_at TIMESTAMPTZ NOT NULL,
           updated_at TIMESTAMPTZ NOT NULL
         );
+      `);
+      await activePool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
       `);
 
       await activePool.query(`
@@ -432,6 +437,7 @@ export async function ensureSqliteSchema(): Promise<void> {
           email TEXT NOT NULL UNIQUE,
           business_type TEXT NOT NULL,
           password_hash TEXT NOT NULL,
+          must_change_password INTEGER NOT NULL DEFAULT 0,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
@@ -754,6 +760,11 @@ export async function ensureSqliteSchema(): Promise<void> {
       db.exec(`CREATE INDEX IF NOT EXISTS orders_provider_payment_id_idx ON orders(provider_payment_id);`);
 
       db.exec(`CREATE INDEX IF NOT EXISTS products_moderation_status_idx ON products(moderation_status);`);
+
+      const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+      if (!userColumns.some((column) => column.name === "must_change_password")) {
+        db.exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;");
+      }
     })();
   }
 

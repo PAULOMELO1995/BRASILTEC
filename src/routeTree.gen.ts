@@ -27,6 +27,7 @@ import { Route as ProdutosRouteImport } from './routes/produtos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SuporteRouteImport } from './routes/suporte'
+import { Route as TrocarSenhaTemporariaRouteImport } from './routes/trocar-senha-temporaria'
 import { Route as CadastroConfirmacaoRouteImport } from './routes/cadastro.confirmacao'
 import { Route as MarketplaceProductIdRouteImport } from './routes/marketplace.$productId'
 import { Route as ProdutosNovoRouteImport } from './routes/produtos.novo'
@@ -121,6 +122,11 @@ const SuporteRoute = SuporteRouteImport.update({
   path: '/suporte',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrocarSenhaTemporariaRoute = TrocarSenhaTemporariaRouteImport.update({
+  id: '/trocar-senha-temporaria',
+  path: '/trocar-senha-temporaria',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CadastroConfirmacaoRoute = CadastroConfirmacaoRouteImport.update({
   id: '/confirmacao',
   path: '/confirmacao',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/suporte': typeof SuporteRoute
+  '/trocar-senha-temporaria': typeof TrocarSenhaTemporariaRoute
   '/cadastro/confirmacao': typeof CadastroConfirmacaoRoute
   '/marketplace/$productId': typeof MarketplaceProductIdRoute
   '/produtos/novo': typeof ProdutosNovoRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/suporte': typeof SuporteRoute
+  '/trocar-senha-temporaria': typeof TrocarSenhaTemporariaRoute
   '/cadastro/confirmacao': typeof CadastroConfirmacaoRoute
   '/marketplace/$productId': typeof MarketplaceProductIdRoute
   '/produtos/novo': typeof ProdutosNovoRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/suporte': typeof SuporteRoute
+  '/trocar-senha-temporaria': typeof TrocarSenhaTemporariaRoute
   '/cadastro/confirmacao': typeof CadastroConfirmacaoRoute
   '/marketplace/$productId': typeof MarketplaceProductIdRoute
   '/produtos/novo': typeof ProdutosNovoRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/redefinir-senha'
     | '/suporte'
+    | '/trocar-senha-temporaria'
     | '/cadastro/confirmacao'
     | '/marketplace/$productId'
     | '/produtos/novo'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/redefinir-senha'
     | '/suporte'
+    | '/trocar-senha-temporaria'
     | '/cadastro/confirmacao'
     | '/marketplace/$productId'
     | '/produtos/novo'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/redefinir-senha'
     | '/suporte'
+    | '/trocar-senha-temporaria'
     | '/cadastro/confirmacao'
     | '/marketplace/$productId'
     | '/produtos/novo'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SuporteRoute: typeof SuporteRoute
+  TrocarSenhaTemporariaRoute: typeof TrocarSenhaTemporariaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -428,6 +441,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuporteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trocar-senha-temporaria': {
+      id: '/trocar-senha-temporaria'
+      path: '/trocar-senha-temporaria'
+      fullPath: '/trocar-senha-temporaria'
+      preLoaderRoute: typeof TrocarSenhaTemporariaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cadastro/confirmacao': {
       id: '/cadastro/confirmacao'
       path: '/confirmacao'
@@ -507,6 +527,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SuporteRoute: SuporteRoute,
+  TrocarSenhaTemporariaRoute: TrocarSenhaTemporariaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

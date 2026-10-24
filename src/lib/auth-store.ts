@@ -11,6 +11,7 @@ export type UserRecord = {
   email: string;
   businessType: BusinessType;
   passwordHash: string;
+  mustChangePassword: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -546,7 +547,9 @@ async function readStoreFile(): Promise<StoreFile> {
     const raw = await readFile(storePath, "utf8");
     const parsed = JSON.parse(raw) as Partial<StoreFile>;
     return {
-      users: Array.isArray(parsed.users) ? parsed.users : [],
+      users: Array.isArray(parsed.users)
+        ? parsed.users.map((user) => ({ ...user, mustChangePassword: user.mustChangePassword ?? false }))
+        : [],
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
       passwordResets: Array.isArray(parsed.passwordResets) ? parsed.passwordResets : [],
       notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
@@ -638,6 +641,7 @@ function mapUserRow(row: {
   email: string;
   business_type: string;
   password_hash: string;
+  must_change_password?: boolean | number;
   created_at: Date | string;
   updated_at: Date | string;
 }): UserRecord {
@@ -647,6 +651,7 @@ function mapUserRow(row: {
     email: row.email,
     businessType: row.business_type as BusinessType,
     passwordHash: row.password_hash,
+    mustChangePassword: Boolean(row.must_change_password),
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
   };
@@ -2595,10 +2600,11 @@ async function listUsersPostgres(): Promise<UserRecord[]> {
     email: string;
     business_type: string;
     password_hash: string;
+    must_change_password: boolean;
     created_at: Date | string;
     updated_at: Date | string;
   }>(
-    `SELECT id, name, email, business_type, password_hash, created_at, updated_at
+    `SELECT id, name, email, business_type, password_hash, must_change_password, created_at, updated_at
      FROM users
      ORDER BY created_at DESC`,
   );
@@ -2632,13 +2638,14 @@ async function createUserPostgres(input: {
     email,
     businessType: input.businessType,
     passwordHash: hashPassword(input.password),
+    mustChangePassword: false,
     createdAt: now,
     updatedAt: now,
   };
 
   await postgresQuery(
-    `INSERT INTO users (id, name, email, business_type, password_hash, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    `INSERT INTO users (id, name, email, business_type, password_hash, must_change_password, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, FALSE, $6, $7)`,
     [user.id, user.name, user.email, user.businessType, user.passwordHash, user.createdAt, user.updatedAt],
   );
 
@@ -2655,10 +2662,11 @@ async function findUserByEmailPostgres(emailInput: string): Promise<UserRecord |
     email: string;
     business_type: string;
     password_hash: string;
+    must_change_password: boolean;
     created_at: Date | string;
     updated_at: Date | string;
   }>(
-    `SELECT id, name, email, business_type, password_hash, created_at, updated_at
+    `SELECT id, name, email, business_type, password_hash, must_change_password, created_at, updated_at
      FROM users
      WHERE email = $1
      LIMIT 1`,
@@ -2744,11 +2752,12 @@ async function getSessionPostgres(token: string): Promise<{ session: SessionReco
     email: string;
     business_type: string;
     password_hash: string;
+    must_change_password: boolean;
     user_created_at: Date | string;
     user_updated_at: Date | string;
   }>(
     `SELECT s.token_hash, s.user_id, s.created_at, s.last_login_at, s.expires_at,
-            u.id, u.name, u.email, u.business_type, u.password_hash,
+            u.id, u.name, u.email, u.business_type, u.password_hash, u.must_change_password,
             u.created_at AS user_created_at, u.updated_at AS user_updated_at
      FROM sessions s
      JOIN users u ON u.id = s.user_id
@@ -2789,6 +2798,7 @@ async function getSessionPostgres(token: string): Promise<{ session: SessionReco
       email: row.email,
       businessType: row.business_type as BusinessType,
       passwordHash: row.password_hash,
+      mustChangePassword: Boolean(row.must_change_password),
       createdAt: new Date(row.user_created_at).toISOString(),
       updatedAt: new Date(row.user_updated_at).toISOString(),
     },
@@ -2851,7 +2861,10 @@ async function resetPasswordWithTokenPostgres(token: string, newPassword: string
   }
 
   const updatedAt = nowIso();
-  await postgresQuery(`UPDATE users SET password_hash = $2, updated_at = $3 WHERE id = $1`, [reset.user_id, hashPassword(newPassword), updatedAt]);
+  await postgresQuery(
+    `UPDATE users SET password_hash = $2, must_change_password = FALSE, updated_at = $3 WHERE id = $1`,
+    [reset.user_id, hashPassword(newPassword), updatedAt],
+  );
   await postgresQuery(`UPDATE password_resets SET used_at = $2 WHERE token_hash = $1`, [tokenDigest, updatedAt]);
   await postgresQuery(`DELETE FROM sessions WHERE user_id = $1`, [reset.user_id]);
 }
@@ -2863,10 +2876,11 @@ async function listUsersSqlite(): Promise<UserRecord[]> {
     email: string;
     business_type: string;
     password_hash: string;
+    must_change_password: number;
     created_at: string;
     updated_at: string;
   }>(
-    `SELECT id, name, email, business_type, password_hash, created_at, updated_at
+    `SELECT id, name, email, business_type, password_hash, must_change_password, created_at, updated_at
      FROM users
      ORDER BY created_at DESC`,
   );
@@ -2904,13 +2918,14 @@ async function createUserSqlite(input: {
     email,
     businessType: input.businessType,
     passwordHash: hashPassword(input.password),
+    mustChangePassword: false,
     createdAt: now,
     updatedAt: now,
   };
 
   await sqliteRun(
-    `INSERT INTO users (id, name, email, business_type, password_hash, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (id, name, email, business_type, password_hash, must_change_password, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
     [user.id, user.name, user.email, user.businessType, user.passwordHash, user.createdAt, user.updatedAt],
   );
 
@@ -2926,10 +2941,11 @@ async function findUserByEmailSqlite(emailInput: string): Promise<UserRecord | n
     email: string;
     business_type: string;
     password_hash: string;
+    must_change_password: number;
     created_at: string;
     updated_at: string;
   }>(
-    `SELECT id, name, email, business_type, password_hash, created_at, updated_at
+    `SELECT id, name, email, business_type, password_hash, must_change_password, created_at, updated_at
      FROM users
      WHERE email = ?
      LIMIT 1`,
@@ -3020,11 +3036,12 @@ async function getSessionSqlite(token: string): Promise<{ session: SessionRecord
     email: string;
     business_type: string;
     password_hash: string;
+    must_change_password: number;
     user_created_at: string;
     user_updated_at: string;
   }>(
     `SELECT s.token_hash, s.user_id, s.created_at, s.last_login_at, s.expires_at,
-            u.id, u.name, u.email, u.business_type, u.password_hash,
+            u.id, u.name, u.email, u.business_type, u.password_hash, u.must_change_password,
             u.created_at AS user_created_at, u.updated_at AS user_updated_at
      FROM sessions s
      JOIN users u ON u.id = s.user_id
@@ -3062,6 +3079,7 @@ async function getSessionSqlite(token: string): Promise<{ session: SessionRecord
       email: row.email,
       businessType: row.business_type as BusinessType,
       passwordHash: row.password_hash,
+      mustChangePassword: Boolean(row.must_change_password),
       createdAt: new Date(row.user_created_at).toISOString(),
       updatedAt: new Date(row.user_updated_at).toISOString(),
     },
@@ -3119,7 +3137,10 @@ async function resetPasswordWithTokenSqlite(token: string, newPassword: string):
   }
 
   const updatedAt = nowIso();
-  await sqliteRun(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`, [hashPassword(newPassword), updatedAt, reset.user_id]);
+  await sqliteRun(
+    `UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = ? WHERE id = ?`,
+    [hashPassword(newPassword), updatedAt, reset.user_id],
+  );
   await sqliteRun(`UPDATE password_resets SET used_at = ? WHERE token_hash = ?`, [updatedAt, tokenDigest]);
   await sqliteRun(`DELETE FROM sessions WHERE user_id = ?`, [reset.user_id]);
 }
@@ -3329,6 +3350,7 @@ export async function createUser(input: {
     email,
     businessType: input.businessType,
     passwordHash: hashPassword(input.password),
+    mustChangePassword: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -3358,6 +3380,99 @@ export async function authenticateUser(input: {
   return user;
 }
 
+export async function generateTemporaryPassword(userId: string): Promise<string> {
+  const temporaryPassword = randomBytes(18).toString("base64url");
+  const updatedAt = nowIso();
+  const passwordHash = hashPassword(temporaryPassword);
+
+  if (isPostgresEnabled()) {
+    const updated = await postgresQuery<{ id: string }>(
+      `UPDATE users
+       SET password_hash = $2, must_change_password = TRUE, updated_at = $3
+       WHERE id = $1
+       RETURNING id`,
+      [userId, passwordHash, updatedAt],
+    );
+    if (!updated[0]) throw new Error("Usuário não encontrado.");
+    await postgresQuery(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
+    return temporaryPassword;
+  }
+
+  if (isSqliteEnabled()) {
+    const user = await sqliteGet<{ id: string }>(`SELECT id FROM users WHERE id = ? LIMIT 1`, [userId]);
+    if (!user) throw new Error("Usuário não encontrado.");
+    await sqliteRun(
+      `UPDATE users SET password_hash = ?, must_change_password = 1, updated_at = ? WHERE id = ?`,
+      [passwordHash, updatedAt, userId],
+    );
+    await sqliteRun(`DELETE FROM sessions WHERE user_id = ?`, [userId]);
+    return temporaryPassword;
+  }
+
+  const store = await readStoreFile();
+  const user = store.users.find((candidate) => candidate.id === userId);
+  if (!user) throw new Error("Usuário não encontrado.");
+  user.passwordHash = passwordHash;
+  user.mustChangePassword = true;
+  user.updatedAt = updatedAt;
+  store.sessions = store.sessions.filter((session) => session.userId !== userId);
+  await writeStoreFile(store);
+  return temporaryPassword;
+}
+
+export async function changeTemporaryPassword(userId: string, password: string): Promise<void> {
+  const updatedAt = nowIso();
+  const passwordHash = hashPassword(password);
+
+  if (isPostgresEnabled()) {
+    const current = await postgresQuery<{ password_hash: string }>(
+      `SELECT password_hash FROM users WHERE id = $1 AND must_change_password = TRUE LIMIT 1`,
+      [userId],
+    );
+    if (!current[0]) throw new Error("A troca obrigatória de senha não está pendente.");
+    if (verifyPassword(password, current[0].password_hash)) {
+      throw new Error("A nova senha deve ser diferente da senha temporária.");
+    }
+    const updated = await postgresQuery<{ id: string }>(
+      `UPDATE users
+       SET password_hash = $2, must_change_password = FALSE, updated_at = $3
+       WHERE id = $1 AND must_change_password = TRUE
+       RETURNING id`,
+      [userId, passwordHash, updatedAt],
+    );
+    if (!updated[0]) throw new Error("A troca obrigatória de senha não está pendente.");
+    return;
+  }
+
+  if (isSqliteEnabled()) {
+    const pending = await sqliteGet<{ password_hash: string }>(
+      `SELECT password_hash FROM users WHERE id = ? AND must_change_password = 1 LIMIT 1`,
+      [userId],
+    );
+    if (!pending) throw new Error("A troca obrigatória de senha não está pendente.");
+    if (verifyPassword(password, pending.password_hash)) {
+      throw new Error("A nova senha deve ser diferente da senha temporária.");
+    }
+    await sqliteRun(
+      `UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = ?
+       WHERE id = ? AND must_change_password = 1`,
+      [passwordHash, updatedAt, userId],
+    );
+    return;
+  }
+
+  const store = await readStoreFile();
+  const user = store.users.find((candidate) => candidate.id === userId && candidate.mustChangePassword);
+  if (!user) throw new Error("A troca obrigatória de senha não está pendente.");
+  if (verifyPassword(password, user.passwordHash)) {
+    throw new Error("A nova senha deve ser diferente da senha temporária.");
+  }
+  user.passwordHash = passwordHash;
+  user.mustChangePassword = false;
+  user.updatedAt = updatedAt;
+  await writeStoreFile(store);
+}
+
 export async function authenticateOrCreateGoogleUser(input: {
   email: string;
   name: string;
@@ -3385,6 +3500,7 @@ export async function authenticateOrCreateGoogleUser(input: {
     email,
     businessType: input.businessType ?? GOOGLE_ACCOUNT_DEFAULT_BUSINESS,
     passwordHash: hashPassword(randomBytes(24).toString("hex")),
+    mustChangePassword: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -3453,6 +3569,7 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
 
   const updatedAt = nowIso();
   user.passwordHash = hashPassword(newPassword);
+  user.mustChangePassword = false;
   user.updatedAt = updatedAt;
   reset.usedAt = updatedAt;
   store.sessions = store.sessions.filter((candidate) => candidate.userId !== user.id);

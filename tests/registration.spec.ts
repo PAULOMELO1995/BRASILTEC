@@ -21,6 +21,53 @@ test("admin role controls remain available without introductory copy", async ({ 
   await expect(section.getByText(/Defina acesso de visualização|Promoções para admin exigem/)).toHaveCount(0);
 });
 
+test("admin temporary password forces a password change on the next login", async ({ page, browser }) => {
+  const email = `senha.temporaria.${Date.now()}@exemplo.com`;
+  const newPassword = "novaSenha9876";
+
+  await loginAndReachPanel(page, "admin.copy@exemplo.com");
+  await page.goto("/admin");
+
+  const targetContext = await browser.newContext();
+  const targetPage = await targetContext.newPage();
+  await registerAndReachConfirmation(targetPage, { name: "Usuário Senha Temporária", email });
+  await targetContext.close();
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const roleSection = page.getByTestId("role-management");
+  const targetRow = roleSection.getByTestId("role-management-row").filter({ hasText: email });
+  const resetButton = targetRow.getByRole("button", { name: `Gerar senha temporária para ${email}` });
+  await expect(resetButton).toBeEnabled();
+  page.once("dialog", (dialog) => dialog.accept());
+  await resetButton.click();
+  await expect(page.getByTestId("temporary-password-result")).toBeVisible();
+  const temporaryPassword = (await page.getByTestId("temporary-password-value").textContent())?.trim() ?? "";
+  expect(temporaryPassword.length).toBeGreaterThan(16);
+
+  const loginContext = await browser.newContext();
+  const loginPage = await loginContext.newPage();
+  await loginPage.goto("/login");
+  await loginPage.locator("#email").fill(email);
+  await loginPage.locator("#senha").fill(temporaryPassword);
+  await loginPage.locator('button:has-text("Entrar")').click();
+  await loginPage.waitForURL("**/trocar-senha-temporaria", { timeout: 30_000 });
+  await loginPage.locator("#password").fill(newPassword);
+  await loginPage.locator("#confirmation").fill(newPassword);
+  await loginPage.locator('button:has-text("Salvar nova senha")').click();
+  await loginPage.waitForURL("**/painel**", { timeout: 30_000 });
+  await loginContext.close();
+
+  const verifyContext = await browser.newContext();
+  const verifyPage = await verifyContext.newPage();
+  await verifyPage.goto("/login");
+  await verifyPage.locator("#email").fill(email);
+  await verifyPage.locator("#senha").fill(temporaryPassword);
+  await verifyPage.locator('button:has-text("Entrar")').click();
+  await expect(verifyPage.getByText("Email ou senha inválidos.")).toBeVisible();
+  await loginAndReachPanel(verifyPage, email, newPassword);
+  await verifyContext.close();
+});
+
 test("support shows the Brasiltec Outlook contact and opens a direct email link", async ({ page }) => {
   await page.goto("/suporte");
   await expect(page.getByRole("link", { name: "brasiltec_net@outlook.com", exact: true })).toHaveAttribute("href", "mailto:brasiltec_net@outlook.com");

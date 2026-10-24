@@ -40,8 +40,8 @@ function Login() {
     setSubmitting(true);
 
     loginUser({ data: { email, password: senha } })
-      .then(() => {
-        window.location.assign("/painel");
+      .then((result) => {
+        window.location.assign(result.user.mustChangePassword ? "/trocar-senha-temporaria" : "/painel");
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Não foi possível entrar agora.");
@@ -98,13 +98,13 @@ function Login() {
             onBusyChange={setGoogleSubmitting}
             onCredential={async (credential) => {
               setError(null);
-              await authenticateWithGoogle({
+              const result = await authenticateWithGoogle({
                 data: {
                   credential,
                 },
               });
 
-              window.location.assign("/painel");
+              window.location.assign(result.user.mustChangePassword ? "/trocar-senha-temporaria" : "/painel");
             }}
           />
 

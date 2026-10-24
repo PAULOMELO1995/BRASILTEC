@@ -5,6 +5,7 @@ import { SUPPORT_EMAIL } from "@/lib/site-contact";
 import {
   authenticateOrCreateGoogleUser,
   authenticateUser,
+  changeTemporaryPassword,
   buyProduct,
   getAdminOverview,
   getPaymentWebhookOpsSummary,
@@ -39,6 +40,7 @@ import {
   moderateAdminProduct,
   setUserAdminRole,
   getSession,
+  generateTemporaryPassword,
   requestWithdrawal,
   requestPasswordReset,
   requestAffiliate,
@@ -131,6 +133,9 @@ async function requireSessionUser() {
   const session = await getSession(token);
   if (!session) {
     throw new Error("Sessão não encontrada.");
+  }
+  if (session.user.mustChangePassword) {
+    throw new Error("Troque sua senha temporária para continuar.");
   }
   return session.user;
 }
@@ -234,6 +239,14 @@ const supportContactSchema = z.object({
 const resetPasswordSchema = z.object({
   token: z.string().trim().min(12),
   password: z.string().min(8),
+});
+
+const adminTemporaryPasswordSchema = z.object({
+  userId: z.string().trim().min(1),
+});
+
+const temporaryPasswordChangeSchema = z.object({
+  password: z.string().min(8).max(128),
 });
 
 const createProductSchema = z.object({
@@ -640,6 +653,7 @@ export const loginUser = createServerFn({ method: "POST" })
         name: user.name,
         email: user.email,
         businessType: user.businessType,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   });
@@ -668,6 +682,7 @@ export const authenticateWithGoogle = createServerFn({ method: "POST" })
         name: user.name,
         email: user.email,
         businessType: user.businessType,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   });
@@ -691,8 +706,22 @@ export const getSessionData = createServerFn({ method: "POST" })
         name: session.user.name,
         email: session.user.email,
         businessType: session.user.businessType,
+        mustChangePassword: session.user.mustChangePassword,
       },
     };
+  });
+
+export const changeTemporaryPasswordData = createServerFn({ method: "POST" })
+  .validator(temporaryPasswordChangeSchema)
+  .handler(async ({ data }) => {
+    const token = readSessionCookie();
+    const session = await getSession(token);
+    if (!session) throw new Error("Sessão não encontrada.");
+    if (!session.user.mustChangePassword) {
+      throw new Error("A troca obrigatória de senha não está pendente.");
+    }
+    await changeTemporaryPassword(session.user.id, data.password);
+    return { ok: true };
   });
 
 export const logoutUser = createServerFn({ method: "POST" })
@@ -745,7 +774,10 @@ export const resetPasswordByToken = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const getDashboardData = createServerFn({ method: "POST" }).handler(async () => getDashboardSummary());
+export const getDashboardData = createServerFn({ method: "POST" }).handler(async () => {
+  await requireSessionUser();
+  return getDashboardSummary();
+});
 
 export const getAdminData = createServerFn({ method: "POST" }).handler(async () => {
   const user = await requireSessionUser();
@@ -791,6 +823,18 @@ export const getAdminRoleDirectoryData = createServerFn({ method: "POST" })
     const user = await requireSessionUser();
     await requireAdminAccess(user, "view");
     return listAdminUserRoles(data?.limit ?? 30);
+  });
+
+export const generateAdminTemporaryPasswordData = createServerFn({ method: "POST" })
+  .validator(adminTemporaryPasswordSchema)
+  .handler(async ({ data }) => {
+    const user = await requireSessionUser();
+    await requireAdminAccess(user, "manage_roles");
+    if (user.id === data.userId) {
+      throw new Error("Não é permitido redefinir a própria senha por esta ação.");
+    }
+    const temporaryPassword = await generateTemporaryPassword(data.userId);
+    return { temporaryPassword };
   });
 
 export const getPlatformSettingsData = createServerFn({ method: "POST" })

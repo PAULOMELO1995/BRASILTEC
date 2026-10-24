@@ -12,6 +12,7 @@ import {
   getAdminPaymentOpsData,
   getAdminRoleAuditData,
   getAdminRoleDirectoryData,
+  generateAdminTemporaryPasswordData,
   getPlatformSettingsData,
   getSessionData,
   moderateAdminProductDecision,
@@ -235,6 +236,7 @@ function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [paymentActionStatus, setPaymentActionStatus] = useState<string | null>(null);
+  const [temporaryCredential, setTemporaryCredential] = useState<{ email: string; password: string } | null>(null);
 
   const publishRate = useMemo(() => {
     if (!data || data.productCount === 0) return 0;
@@ -587,6 +589,24 @@ function AdminPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Não foi possível atualizar o papel do usuário.";
       setActionError(message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleGenerateTemporaryPassword(entry: AdminRoleDirectoryItem) {
+    if (!window.confirm(`Gerar uma senha temporária para ${entry.email}? A senha atual será invalidada e todas as sessões encerradas.`)) {
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+    setTemporaryCredential(null);
+    try {
+      const result = await generateAdminTemporaryPasswordData({ data: { userId: entry.userId } });
+      setTemporaryCredential({ email: entry.email, password: result.temporaryPassword });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Não foi possível gerar a senha temporária.");
     } finally {
       setActionLoading(false);
     }
@@ -982,6 +1002,16 @@ function AdminPage() {
                   />
                 ) : null}
 
+                {temporaryCredential ? (
+                  <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4" role="status" data-testid="temporary-password-result">
+                    <p className="font-medium">Senha temporária gerada para {temporaryCredential.email}</p>
+                    <p className="mt-1 text-sm">Compartilhe com segurança. Ela será exibida somente nesta tela e exigirá troca no próximo acesso.</p>
+                    <code className="mt-3 block break-all rounded-lg bg-background px-3 py-2 font-mono text-sm" data-testid="temporary-password-value">
+                      {temporaryCredential.password}
+                    </code>
+                  </div>
+                ) : null}
+
                 <div className="mt-4 grid gap-2">
                   {roleDirectory.length === 0 ? <StatusNotice variant="empty" message="Nenhum usuário disponível para gestão de papéis." /> : null}
                   {roleDirectory.map((entry) => {
@@ -1032,6 +1062,15 @@ function AdminPage() {
                               aria-label={`Salvar papel de ${entry.email}`}
                             >
                               Salvar papel
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-base btn-ghost"
+                              disabled={!access?.canManageRoles || actionLoading || isSelf}
+                              onClick={() => handleGenerateTemporaryPassword(entry)}
+                              aria-label={`Gerar senha temporária para ${entry.email}`}
+                            >
+                              Gerar senha temporária
                             </button>
                           </div>
                         </div>
